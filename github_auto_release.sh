@@ -1,11 +1,23 @@
-#########################################
+######################################################################################################################################
 ## BlackDuck Github Auto Release 
-## v0.0.1
+## v0.0.2
 ##
-## Purpose:
+## Purpose: Automatically release build artifacts to GitHub on stable, non-SNAPSHOT, project builds. Uses the 
+## following project: https://github.com/aktau/github-release. 
 ##
-## How to: 
-#########################################
+## How to: to run, ./github_auto_release.sh <parameters>
+## Parameters:
+##		-b|--buildTool 						required: specify build tool (maven or gradle for now)
+##		-g|--gitToken          				required: specify personal github authentication token (this will not be required in final release)
+##		-a|--artifactPath        			optional: specify file path to project's artifact file (if build artifact is not standard, 
+##												user can specify to make sure it is released)
+##		-m|--releaseDesc         			optional: add description for release to github
+##		-o|--organization		   			optional: the name of the organization under which the repo is located (default is blackducksoftware)
+##		-ev|--executableVersion   			optional: which version of the GitHub-Release executable to be used (default is v0.7.2 because that
+##												is the version this script is being tested with)
+##		-ep|--executablePath 	   			optional: where on the user's machine the GitHub-Release executable will live (defualt is
+##												set to ~/temp/blackducksoftware)
+########################################################################################################################################
 
 BLUE='\033[0;34m'
 NC='\033[0m'
@@ -15,132 +27,158 @@ GREEN='\033[0;32m'
 
 BUILD_TOOL=""
 GITHUB_TOKEN=""
-FILEPATH=""
-DESCRIPTION=""
+ARTIFACT_FILE_PATH=""
+DESC="GitHub Autorelease"
+EXECUTABLE_VERSION="v0.7.2" #tested and built on this
+EXECUTABLE_PATH=~/"temp/blackducksoftware"
+ORGANIZATION="patrickwilliamconway" #final version this will be blackducksoftware
 
-while getopts "b:o:f:d:h" OPTION
+echo -e " --- ${GREEN}Starting GitHub Autorelease Script${NC} --- " 
+
+
+####################################	PARSING INPUT PARAMETERS 		#####################################
+
+
+args=("$@")
+# echo $#
+for ((i=0; i<$#; i=i+2)); #handle incorrect number of inputs
 do
-    case $OPTION in
-        b)
-                BUILD_TOOL=$OPTARG
-                ;;
-        o)
-                export GITHUB_TOKEN=$OPTARG
-                ;;
-        f)
-                FILEPATH=$OPTARG
-                ;;
-        d)
-                DESCRIPTION=$OPTARG
-                ;;
-        h)
-                echo "HELP MENU - options"
-                echo "--buildTool           required: specify build tool"
-                echo "--gitToken            required: specify personal github authentication token"
-                echo "--artifactPath        optional: specify file path to project's artifact file"
-                echo "--releaseDesc         optional: add description for release to github" #maybe make this -m to match github?
-                exit 1
-                ;;
-        esac
+    FLAG=${args[$i]}
+    #echo "$i: $FLAG"
+    VAL=${args[$i+1]} 
+    #echo "$i+1 $VAL"
+
+    case $FLAG in
+        -b|--buildTool) 
+            BUILD_TOOL=$VAL
+            ;;
+        -g|--gitToken)
+            export GITHUB_TOKEN=$VAL
+            ;;
+        -a|--artifactPath)
+            ARTIFACT_FILE_PATH=$VAL
+            ;;
+        -m|--releaseDesc) #rename
+            DESCRIPTION=$VAL
+            ;;
+       	-o|--organization)
+			ORGANIZATION=$VAL
+			;;
+        -ev|--executableVersion)
+			EXECUTABLE_VERSION=$VAL
+			echo -e "${BLUE}github-release executable version:${NC} $EXECUTABLE_VERSION"
+			;;
+		-ep|--executablePath)
+			EXECUTABLE_PATH=$VAL
+			echo -e "${BLUE}github-release excutable location path:${NC} $EXECUTABLE_PATH"
+			;;
+        -h|--help) 
+            echo -e "${BLUE}HELP MENU - options${NC}"
+			echo -e "-b|--buildTool 					${RED}required:${NC} specify build tool"
+			echo -e "-g|--gitToken          				${RED}required:${NC} specify personal github authentication token"
+			echo -e "-a|--artifactPath        			${YELLOW}optional:${NC} specify file path to project's artifact file"
+			echo -e "-m|--releaseDesc         			${YELLOW}optional:${NC} add description for release to github" 
+			echo -e "-o|--organization		   		${YELLOW}optional:${NC} the name of the organization under which the repo is located (default is blackducksoftware)"
+			echo -e "-ev|--executableVersion   			${YELLOW}optional:${NC} which version of the GitHub-Release executable to be used (default is v0.7.2)"
+			echo -e "-ep|--executablePath 	   			${YELLOW}optional:${NC} where on the user's machine the GitHub-Release executable will live (defualt is ~/temp/blackducksoftware)"
+			exit 1
+			;;
+    esac
 done
 
-if [ "$BUILD_TOOL" == "" ] || [ "$GITHUB_TOKEN" == "" ]; then 
-    echo -e " --- ${RED}ERROR: BUILD_TOOL (-b) and GITHUB_TOKEN must be specified (-o)${NC} --- "
+if [ -z "$BUILD_TOOL" ] || [ -z "$GITHUB_TOKEN" ]; then 
+    echo -e " --- ${RED}ERROR: BUILD_TOOL ($BUILD_TOOL) (-b|--buildTool) and GITHUB_TOKEN ($GITHUB_TOKEN) must be specified (-g|--gitToken) ${NC} --- "
     exit 1
 fi
 
-if [[ "$DESC" == "" ]]; then
-	DESC="GitHub Autorelease" 
+####################################	FINDING GITHUB-RELEASE EXECUTABLE FILE 		#####################################
+#this section may belong within the snapshot check section - you don't need to download the executable file if you aren't going to release.
+
+EXECUTABLE_PATH_EXISTS=$(find $EXECUTABLE_PATH -name "github-release")
+if [ -z "$EXECUTABLE_PATH_EXISTS" ]; then 
+	echo -e " --- ${BLUE}github-release executable does not already exist on this machine${NC} --- "
+	GO=$(which go) #need to accomodate the windows equivalent
+	if [ -z "$GO" ]; then #if go isn't installed on the machine, pull binaries from releases directly
+		OS_TYPE=$(uname -a | awk {'print $1'}) 
+		if [[ "$OS_TYPE" == "Darwin" ]] || [[ "$OS_TYPE" == "Linux" ]]; then
+			echo -e " --- ${BLUE}Getting necessary github-release executable from github.com/aktau/github-release${NC} --- "
+			mkdir $EXECUTABLE_PATH
+			wget -O $EXECUTABLE_PATH/"$OS_TYPE"-amd64-github-release.tar.bz2 "https://github.com/aktau/github-release/releases/download/$EXECUTABLE_VERSION/$OS_TYPE-amd64-github-release.tar.bz2" 
+			bzip2 -d $EXECUTABLE_PATH/"$OS_TYPE"-amd64-github-release.tar.bz2
+			tar -xvf $EXECUTABLE_PATH/"$OS_TYPE"-amd64-github-release.tar -C $EXECUTABLE_PATH/
+			mv $EXECUTABLE_PATH/bin/"$OS_TYPE"/amd64/github-release $EXECUTABLE_PATH/github-release
+			rm -R $EXECUTABLE_PATH/bin $EXECUTABLE_PATH/"$OS_TYPE"-amd64-github-release.tar
+			echo " --- github-release executable now located in $EXECUTABLE_PATH --- "
+		elif [[ "$OS_TYPE" == "Windows" ]]; then #windows section needs to be worked on
+			wget -O $EXECUTABLE_PATH/windows-amd64-github-release.zip "https://github.com/aktau/github-release/releases/download/v0.7.2/windows-amd64-github-release.zip" 
+			unzip $EXECUTABLE_PATH/windows-amd64-github-release.zip -d $EXECUTABLE_PATH/
+			mv $EXECUTABLE_PATH/bin/windows/amd64/github-release.exe $EXECUTABLE_PATH/
+			rm -R $EXECUTABLE_PATH/bin $EXECUTABLE_PATH/windows-amd64-github-release.zip
+			echo " --- github-release executable now located in $EXECUTABLE_PATH --- "
+		fi
+	else
+		echo -e " --- ${BLUE}Getting executable via go command: go get github.com/aktau/github-release${NC} --- "
+		go get github.com/aktau/github-release
+		mv "$GOPATH"/bin/github-release $EXECUTABLE_PATH #a user can have go but no have go path defined. Must save to default place.
+		rm -rf "$GOPATH"/pkg/darwin_amd64
+		rm -rf "$GOPATH"/src/github.com/aktau "$GOPATH"/src/github.com/dustin "$GOPATH"/src/github.com/tomnomnom "$GOPATH"/src/github.com/voxelbrain
+		echo " --- github-release executable now located in $EXECUTABLE_PATH --- "	
+	fi
 fi
 
-	EXECUTABLE_PATH=$(find ~/temp/blackducksoftware -name "github-release")
-	if [[ "$EXECUTABLE_PATH" == "" ]]; then
-			echo -e " --- ${BLUE}Getting necessary github-release executable from github.com/aktau/github-release${NC} --- "
-			OS_TYPE=$(uname -a | awk {'print $1'})
+if [[ "$BUILD_TOOL" == "maven" ]]; then 
+	RELEASE_VERSION=$(mvn help:evaluate -Dexpression=project.version | grep -e 'Building')
+	RELEASE_VERSION=$(echo $RELEASE_VERSION | awk {'print $NF'})
+elif [[ "$BUILD_TOOL" == "gradle" ]]; then
+	RELEASE_VERSION=$(./gradlew properties | grep ^version:)
+	RELEASE_VERSION=${RELEASE_VERSION##* }
+fi
 
-			if [[ "$OS_TYPE" == "Linux" ]]; then
-				mkdir ~/temp/blackducksoftware
-				wget -O ~/temp/blackducksoftware/linux-amd64-github-release.tar.bz2 "https://github.com/aktau/github-release/releases/download/v0.7.2/linux-amd64-github-release.tar.bz2" 
-				bzip2 -d ~/temp/blackducksoftware/linux-amd64-github-release.tar.bz2
-				tar -xvf ~/temp/blackducksoftware/linux-amd64-github-release.tar -C ~/temp/blackducksoftware/
-				mv ~/temp/blackducksoftware/bin/linux/amd64/github-release ~/temp/blackducksoftware/github-release
-				rm -R ~/temp/blackducksoftware/bin ~/temp/blackducksoftware/linux-amd64-github-release.tar
-			elif [[ "$OS_TYPE" == "Darwin" ]]; then
-				mkdir ~/temp/blackducksoftware
-				wget -O ~/temp/blackducksoftware/darwin-amd64-github-release.tar.bz2 "https://github.com/aktau/github-release/releases/download/v0.7.2/darwin-amd64-github-release.tar.bz2" 
-				bzip2 -d ~/temp/blackducksoftware/darwin-amd64-github-release.tar.bz2
-				tar -xvf ~/temp/blackducksoftware/darwin-amd64-github-release.tar -C ~/temp/blackducksoftware/
-				mv ~/temp/blackducksoftware/bin/darwin/amd64/github-release ~/temp/blackducksoftware/github-release
-				rm -R ~/temp/blackducksoftware/bin ~/temp/blackducksoftware/darwin-amd64-github-release.tar
-			elif [[ "$OS_TYPE" == "Windows" ]]; then
-				wget -O ~/temp/blackducksoftware/windows-amd64-github-release.zip "https://github.com/aktau/github-release/releases/download/v0.7.2/windows-amd64-github-release.zip" 
-				unzip ~/temp/blackducksoftware/windows-amd64-github-release.zip -d ~/temp/blackducksoftware/
-				mv ~/temp/blackducksoftware/bin/windows/amd64/github-release.exe ~/temp/blackducksoftware/
-				rm -R ~/temp/blackducksoftware/bin ~/temp/blackducksoftware/windows-amd64-github-release.zip
-			elif [[ "$OS_TYPE" == "Freebsd" ]]; then
-				mkdir ~/temp/blackducksoftware
-				wget -O ~/temp/blackducksoftware/freebds-amd64-github-release.tar.bz2 "https://github.com/aktau/github-release/releases/download/v0.7.2/freebds-amd64-github-release.tar.bz2" 
-				bzip2 -d ~/temp/blackducksoftware/freebds-amd64-github-release.tar.bz2
-				tar -xvf ~/temp/blackducksoftware/freebds-amd64-github-release.tar -C ~/temp/blackducksoftware/
-				mv ~/temp/blackducksoftware/bin/freebds/amd64/github-release ~/temp/blackducksoftware/github-release
-				rm -R ~/temp/blackducksoftware/bin ~/temp/blackducksoftware/freebds-amd64-github-release.tar
+
+####################################	USING INPUT AND EXECUTABLE FILE TO RELEASE/POST TO GITHUB 		#####################################
+
+
+if [[ $RELEASE_VERSION != *"SNAPSHOT"* ]]; then
+	REPO_NAME=$(git remote -v)
+	REPO_NAME=$(echo $REPO_NAME | awk '{print $2}')
+	REPO_NAME=${REPO_NAME##*/}
+	REPO_NAME=${REPO_NAME%.*}
+	
+	if [ -z "$ARTIFACT_FILE_PATH" ]; then 
+		ARTIFACT_FILE_PATH=$(find . -iname "$REPO_NAME-$RELEASE_VERSION.zip") #add capability to get .tar files as well
+	fi
+	ARTIFACT_NAME=$(basename "$ARTIFACT_FILE_PATH")
+	
+	echo -e "${BLUE}Build Tool:${NC} $BUILD_TOOL"
+	echo -e "${BLUE}Release Description specified:${NC} $DESC"
+	echo -e "${BLUE}Repository Name:${NC} $REPO_NAME"
+	echo -e "${BLUE}Release Version:${NC} $RELEASE_VERSION"
+
+	#RELEASE_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release release --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $RELEASE_VERSION --description "$DESC" 2>&1)
+	if [[ "$RELEASE_COMMAND_OUTPUT" == "" ]]; then
+		echo -e " --- ${GREEN}Release posted to GitHub${NC} --- "
+		
+		if [ -n "$ARTIFACT_FILE_PATH" ]; then 
+			echo -e "${BLUE}Artifact ARTIFACT_FILE_PATH:${NC} $ARTIFACT_FILE_PATH"
+			echo -e "${BLUE}Artifact Name:${NC} $ARTIFACT_NAME"
+			
+			#POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_FILE_PATH" 2>&1)
+			if [ -z "$POST_COMMAND_OUTPUT" ]; then
+				echo -e " --- ${GREEN}Artifacts attached to release on GitHub${NC} --- "
+				echo -e " --- ${GREEN}GitHub Autorelease Script Ending${NC} --- "
 			else
-				echo -e " --- ${RED}OS type unrecognizable. Exiting shell.${NC} --- "
+				echo -e "--- ${RED}$POST_COMMAND_OUTPUT${NC} --- "
 				exit 1
 			fi
-
-			echo " --- github-release executable now located in ~/temp/blackducksoftware --- "
-	fi
-
-	if [[ "$BUILD_TOOL" == "maven" ]]; then 
-		RELEASE_VERSION=$(mvn help:evaluate -Dexpression=project.version | grep -e 'Building')
-		RELEASE_VERSION=$(echo $RELEASE_VERSION | awk {'print $NF'})
-	elif [[ "$BUILD_TOOL" == "gradle" ]]; then
-		RELEASE_VERSION=$(./gradlew properties | grep ^version:)
-		RELEASE_VERSION=${RELEASE_VERSION##* }
-	fi
-
-	if [[ $RELEASE_VERSION != *"SNAPSHOT"* ]]; then
-		REPO_NAME=$(git remote -v)
-		REPO_NAME=$(echo $REPO_NAME | awk '{print $2}')
-		REPO_NAME=${REPO_NAME##*/}
-		REPO_NAME=${REPO_NAME%.*}
-
-		if [[ "$FILEPATH" == "" ]]; then 
-			FILEPATH=$(find . -iname "$REPO_NAME-$RELEASE_VERSION.zip") #should this also look for .tar files?
+		else
+			echo -e " --- ${YELLOW}No artifact files found. No artifact will be attached to release.${NC} --- "
 		fi
-		ARTIFACT_NAME=$(basename "$FILEPATH")
-		
-		echo -e "${BLUE}Build Tool:${NC} $BUILD_TOOL"
-		echo -e "${BLUE}Release Description specified:${NC} $DESC"
-		echo -e "${BLUE}Repository Name:${NC} $REPO_NAME"
-		echo -e "${BLUE}Release Version:${NC} $RELEASE_VERSION"
+	else 
+		echo -e " --- ${RED}$RELEASE_COMMAND_OUTPUT${NC} --- "
+		exit 1
+	fi 
+else
+	echo -e " --- ${YELLOW}SNAPSHOT found in version name ($RELEASE_VERSION) - NOT releasing to GitHub${NC} --- "
+fi
 
-		RELEASE_COMMAND_OUTPUT=$(exec ~/temp/blackducksoftware/github-release release --user patrickwilliamconway --repo $REPO_NAME --tag $RELEASE_VERSION --name $RELEASE_VERSION --description "$DESC" 2>&1)
-		#RELEASE_COMMAND_OUTPUT=""
-		if [[ "$RELEASE_COMMAND_OUTPUT" == "" ]]; then
-			echo -e " --- ${GREEN}Release posted to GitHub${NC} --- "
-			
-			if [[ "$FILEPATH" != "" ]]; then 
-				echo -e "${BLUE}Artifact Filepath:${NC} $FILEPATH"
-				echo -e "${BLUE}Artifact Name:${NC} $ARTIFACT_NAME"
-				
-				POST_COMMAND_OUTPUT=$(exec ~/temp/blackducksoftware/github-release upload --user patrickwilliamconway --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$FILEPATH" 2>&1)
-				#POST_COMMAND_OUTPUT=""
-				if [[ "$POST_COMMAND_OUTPUT" == "" ]]; then
-					echo -e " --- ${GREEN}Artifacts attached to release on GitHub${NC} --- "
-				else
-					echo -e "--- ${RED}$POST_COMMAND_OUTPUT${NC} --- "
-					exit 1
-				fi
-			else
-				echo -e " --- ${YELLOW}No artifact files found. No artifact will be attached to release.${NC} --- "
-			fi
-		else 
-			echo -e " --- ${RED}$RELEASE_COMMAND_OUTPUT${NC} --- "
-			exit 1
-		fi 
-	else
-		echo -e " --- SNAPSHOT found in version name (${YELLOW}$RELEASE_VERSION${NC}) - NOT releasing to GitHub --- "
-	fi
 
