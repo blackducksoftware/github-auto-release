@@ -1,6 +1,6 @@
 ###############################################################################################################################################################################################
 ## BlackDuck Github Auto Release 
-## v0.0.2
+## v0.0.3
 ##
 ## Purpose: Automatically release build artifacts to GitHub on stable, non-SNAPSHOT, project builds. Uses the following project: https://github.com/aktau/github-release. 
 ##
@@ -8,7 +8,8 @@
 ## Parameters:
 ##		-b|--buildTool 						required: specify build tool (maven or gradle for now)
 ##		-g|--gitToken          				required: specify personal github authentication token (this will not be required in final release)
-##		-a|--artifactPath        			optional: specify file path to project's artifact file (if build artifact is not standard, user can specify to make sure it is released)
+##		-f|--artifactFile        			optional: specify file path to project's artifact file (if build artifact is not standard, user can specify to make sure it is released) <CANNOT SPECIFY BOTH A DIRECTORY AND FILE>
+##		-d|--artifactDirectory 				optional: specify a directory to be zipped and released <CANNOT SPECIFY BOTH A DIRECTORY AND FILE>
 ##		-m|--releaseDesc         			optional: add description for release to github
 ##		-o|--organization		   			optional: the name of the organization under which the repo is located (default is blackducksoftware)
 ##		-ev|--executableVersion   			optional: which version of the GitHub-Release executable to be used (default is v0.7.2 because that is the version this script is being tested with)
@@ -26,23 +27,23 @@ GITHUB_TOKEN=""
 ARTIFACT_FILE=""
 ARTIFACT_DIRECTORY=""
 DESC="GitHub Autorelease"
-EXECUTABLE_VERSION="v0.7.2" #default to this because this is what 
+EXECUTABLE_VERSION="v0.7.2" #default to this because this is what script has been tested/based on
 EXECUTABLE_PATH=~/"temp/blackducksoftware"
 ORGANIZATION="patrickwilliamconway" #final version this will be blackducksoftware
-#touch binaries.txt
 
 echo -e " --- ${GREEN}Starting GitHub Autorelease Script${NC} --- " 
 
 ####################################	PARSING INPUT PARAMETERS 		#####################################
-
 args=("$@")
 for ((i=0; i<$#; i=i+2));
 do
     FLAG=${args[$i]}
     VAL=${args[$i+1]}
     if [[ "$VAL" == -* ]] || [[ "$VAL" == --* ]] || [[ -z "$VAL" ]]; then #should this just be a check for an empty string, or should it be like it is?
-    	echo -e " --- ${RED}ERROR: Incorrectly formatted VAL input. Flag/Value pair < $FLAG, $VAL > causing error.${NC} --- "
-    	exit 1
+    	if [[ "$FLAG" != "-h" ]] && [[ "$FLAG" != "--help" ]]; then
+	    	echo -e " --- ${RED}ERROR: Incorrectly formatted VAL input. Flag/Value pair < $FLAG, $VAL > causing error.${NC} --- "
+	    	exit 1
+    	fi
     fi
 
     case $FLAG in
@@ -56,7 +57,7 @@ do
         -g|--gitToken)
             export GITHUB_TOKEN=$VAL #this will exist within jenkins
             ;;
-        -a|--artifactPath)
+        -f|--artifactFile)
             ARTIFACT_FILE=$VAL
             echo -e "${BLUE}artifact file path:${NC} $ARTIFACT_FILE. Script will look for this exact build artifact."
             ;;
@@ -79,7 +80,8 @@ do
             echo -e "${BLUE}HELP MENU - options${NC}"
 			echo -e "-b|--buildTool 					${RED}required:${NC} specify build tool"
 			echo -e "-g|--gitToken          				${RED}required:${NC} specify personal github authentication token"
-			echo -e "-a|--artifactPath        			${YELLOW}optional:${NC} specify file path to project's artifact file"
+			echo -e "-f|--artifactFile        			${YELLOW}optional:${NC} specify file path to project's artifact file"
+			echo -e "-d|--artifactDirectory 				${YELLOW}optional:${NC} specify a directory to be zipped and released <CANNOT SPECIFY BOTH A DIRECTORY AND FILE>"
 			echo -e "-m|--releaseDesc         			${YELLOW}optional:${NC} add description for release to github" 
 			echo -e "-o|--organization		   		${YELLOW}optional:${NC} the name of the organization under which the repo is located (default is blackducksoftware)"
 			echo -e "-ev|--executableVersion   			${YELLOW}optional:${NC} which version of the GitHub-Release executable to be used (default is v0.7.2)"
@@ -96,6 +98,9 @@ done
 if [ -z "$BUILD_TOOL" ] || [ -z "$GITHUB_TOKEN" ]; then 
     echo -e " --- ${RED}ERROR: BUILD_TOOL ($BUILD_TOOL) (-b|--buildTool) and GITHUB_TOKEN ($GITHUB_TOKEN) must be specified (-g|--gitToken) ${NC} --- "
     exit 1
+elif ! [ -z "$ARTIFACT_DIRECTORY" ] && ! [ -z "$ARTIFACT_FILE"]; then
+	echo -e " --- ${RED}ERROR: ARTIFACT_DIRECTORY ($ARTIFACT_DIRECTORY) and ARTIFACT_FILE ($ARTIFACT_FILE) cannot both be specified${NC} --- "
+	exit 1
 fi
 
 shopt -s nocasematch
@@ -155,7 +160,6 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 
 
 	####################################	USING INPUT AND EXECUTABLE FILE TO RELEASE/POST TO GITHUB 		#####################################
-
 	REPO_NAME=$(git remote -v)
 	REPO_NAME=$(echo $REPO_NAME | awk '{print $2}')
 	REPO_NAME=${REPO_NAME##*/}
@@ -171,20 +175,26 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 	if [ -z "$RELEASE_COMMAND_OUTPUT" ]; then
 		echo -e " --- ${GREEN}Release posted to GitHub${NC} --- "
 
-		if [ -n "$ARTIFACT_FILE" ]; then 
+		if ! [ -z "$ARTIFACT_FILE" ]; then 
 			ARTIFACT_FILE=$(find . -iname "$ARTIFACT_FILE")
 			ARTIFACT_NAME=$(basename "$ARTIFACT_FILE")
-			echo -e "${BLUE}Artifact ARTIFACT_FILE:${NC} $ARTIFACT_FILE"
+			echo -e "${BLUE}Artifact File:${NC} $ARTIFACT_FILE"
 			echo -e "${BLUE}Artifact Name:${NC} $ARTIFACT_NAME"
 			POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_FILE" 2>&1)	
-		else
+		elif ! [ -z "$ARTIFACT_DIRECTORY" ]; then
+			TEMP=$ARTIFACT_DIRECTORY
+		  	ARTIFACT_DIRECTORY=$(find . -iname "$ARTIFACT_DIRECTORY")
+		  	ARTIFACT_NAME="$REPO_NAME"-"$RELEASE_VERSION"_"$TEMP"Dir.zip
+		  	zip -r "$ARTIFACT_NAME".zip $ARTIFACT_DIRECTORY 
+		  	POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_NAME.zip" 2>&1)	
+		else 
 			ARTIFACT_FILE=$(find . -iname "$REPO_NAME-$RELEASE_VERSION.zip")
 		
 			if [ -z "$ARTIFACT_FILE" ]; then #if .zip doesn't exist, look for .tar
 				ARTIFACT_FILE=$(find . -iname "$REPO_NAME-$RELEASE_VERSION.tar")
 			fi
 
-			if [ -n "$ARTIFACT_FILE" ]; then
+			if ! [ -z "$ARTIFACT_FILE" ]; then
 				ARTIFACT_NAME=$(basename "$ARTIFACT_FILE")
 				echo -e "${BLUE}Artifact ARTIFACT_FILE:${NC} $ARTIFACT_FILE"
 				echo -e "${BLUE}Artifact Name:${NC} $ARTIFACT_NAME" 
@@ -193,14 +203,6 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 				echo -e " --- ${YELLOW}No artifact files found. No artifact will be attached to release.${NC} --- "
 				POST_COMMAND_OUTPUT="null"
 			fi		
-		fi
-
-		if [[ -n "$ARTIFACT_DIRECTORY" ]]; then
-		  	ARTIFACT_DIRECTORY=$(find . -iname "$ARTIFACT_DIRECTORY")
-		  	ARTIFACT_NAME="$REPO_NAME-$RELEASE_VERSION_collection"
-		  	zip -r "$ARTIFACT_NAME".zip $ARTIFACT_DIRECTORY 
-		  	
-		  	POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_NAME.zip" 2>&1)	
 		fi
 
 		if [ -z "$POST_COMMAND_OUTPUT" ]; then
@@ -222,5 +224,4 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 else
 	echo -e " --- ${YELLOW}SNAPSHOT found in version name OR version name doesn't follow convention x.y.z where x,y,z are integers separated by .'s - ($RELEASE_VERSION) - NOT releasing to GitHub${NC} --- "
 fi
-
 
