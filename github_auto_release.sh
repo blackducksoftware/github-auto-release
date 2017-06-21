@@ -128,10 +128,10 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 			OS_TYPE=$(echo "$OS_TYPE" | tr '[:upper:]' '[:lower:]') #convert OSTYPE to lower case
 			if [[ "$OS_TYPE" == "darwin" ]] || [[ "$OS_TYPE" == "linux" ]]; then
 				echo " --- Getting necessary github-release executable from github.com/aktau/github-release --- "
-				#curl -OL "https://github.com/aktau/github-release/releases/download/$EXECUTABLE_VERSION/$OS_TYPE-amd64-github-release.tar.bz2" 
-				curl --url "https://github.com/aktau/github-release/releases/download/$EXECUTABLE_VERSION/$OS_TYPE-amd64-github-release.tar.bz2" --output "$EXECUTABLE_PATH/$OS_TYPE-amd64-github-release.tar.bz2"
-				tar -zxvf "$EXECUTABLE_PATH/$OS_TYPE"-amd64-github-release.tar.bz2
-				#mv bin/"$OS_TYPE"/amd64/github-release $EXECUTABLE_PATH
+			     	wget -O $EXECUTABLE_PATH/"$OS_TYPE"-amd64-github-release.tar.bz2 "https://github.com/aktau/github-release/releases/download/$EXECUTABLE_VERSION/$OS_TYPE-amd64-github-release.tar.bz2"
+                                tar -xvf "$EXECUTABLE_PATH/$OS_TYPE"-amd64-github-release.tar.bz2 -C $EXECUTABLE_PATH
+                                echo "Moving from: $EXECUTABLE_PATH/bin/"$OS_TYPE"/amd64/github-release"
+                                mv $EXECUTABLE_PATH/bin/"$OS_TYPE"/amd64/github-release $EXECUTABLE_PATH
 				rm -R "$EXECUTABLE_PATH/$OS_TYPE"-amd64-github-release.tar.bz2 bin
 				echo " --- github-release executable now located in $EXECUTABLE_PATH --- "
 			elif [[ "$OS_TYPE" == "mingw" ]]; then #haven't tested on windows
