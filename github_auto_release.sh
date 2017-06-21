@@ -23,12 +23,11 @@ RED='\033[0;31m'
 GREEN='\033[0;32m' 
 
 BUILD_TOOL=""
-GITHUB_TOKEN=""
 ARTIFACT_FILE=""
 ARTIFACT_DIRECTORY=""
 DESC="GitHub Autorelease"
 EXECUTABLE_VERSION="v0.7.2" #default to this because this is what script has been tested/based on
-EXECUTABLE_PATH=~/"temp/blackducksoftware"
+EXECUTABLE_PATH=~/temp/blackducksoftware
 ORGANIZATION="patrickwilliamconway" #final version this will be blackducksoftware
 
 echo -e " --- ${GREEN}Starting GitHub Autorelease Script${NC} --- " 
@@ -54,9 +53,6 @@ do
 			ARTIFACT_DIRECTORY=$VAL
 			echo -e "${BLUE}artifact directory:${NC} $ARTIFACT_DIRECTORY. Script will look for this exact directory. If it exists, it will zip and attach all contents to release."
 			;;
-        -g|--gitToken)
-            export GITHUB_TOKEN=$VAL #this will exist within jenkins
-            ;;
         -f|--artifactFile)
             ARTIFACT_FILE=$VAL
             echo -e "${BLUE}artifact file path:${NC} $ARTIFACT_FILE. Script will look for this exact build artifact."
@@ -95,8 +91,8 @@ do
     esac
 done
 
-if [ -z "$BUILD_TOOL" ] || [ -z "$GITHUB_TOKEN" ]; then 
-    echo -e " --- ${RED}ERROR: BUILD_TOOL ($BUILD_TOOL) (-b|--buildTool) and GITHUB_TOKEN ($GITHUB_TOKEN) must be specified (-g|--gitToken) ${NC} --- "
+if [ -z "$BUILD_TOOL" ]; then 
+    echo -e " --- ${RED}ERROR: BUILD_TOOL ($BUILD_TOOL) (-b|--buildTool)${NC} --- "
     exit 1
 elif ! [ -z "$ARTIFACT_DIRECTORY" ] && ! [ -z "$ARTIFACT_FILE"]; then
 	echo -e " --- ${RED}ERROR: ARTIFACT_DIRECTORY ($ARTIFACT_DIRECTORY) and ARTIFACT_FILE ($ARTIFACT_FILE) cannot both be specified${NC} --- "
@@ -120,26 +116,31 @@ shopt -u nocasematch
 if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION" != *"SNAPSHOT"* ]]; then #regex matches x.y.z where x,y,z are integers
 
 	####################################	FINDING GITHUB-RELEASE EXECUTABLE FILE 		#####################################
+	if [ ! -d "$EXECUTABLE_PATH" ]; then
+		mkdir -p "$EXECUTABLE_PATH"
+		echo "$EXECUTABLE_PATH was just created"
+	fi
+
+
 	EXECUTABLE_PATH_EXISTS=$(find $EXECUTABLE_PATH -name "github-release")
 	if [ -z "$EXECUTABLE_PATH_EXISTS" ]; then 
 		echo -e " --- ${BLUE}github-release executable does not already exist on this machine${NC} --- "
 		GO=$(which go) #need to accomodate the windows equivalent
 		if [ -z "$GO" ]; then #if go isn't installed on the machine, pull binaries from releases directly
 			OS_TYPE=$(uname -a | awk {'print $1'}) 
-			if [[ "$OS_TYPE" == "Darwin" ]] || [[ "$OS_TYPE" == "Linux" ]]; then
+			OS_TYPE=$(echo "$OS_TYPE" | tr '[:upper:]' '[:lower:]') #convert OSTYPE to lower case
+			if [[ "$OS_TYPE" == "darwin" ]] || [[ "$OS_TYPE" == "linux" ]]; then
 				echo -e " --- ${BLUE}Getting necessary github-release executable from github.com/aktau/github-release${NC} --- "
-				mkdir $EXECUTABLE_PATH
-				wget -O $EXECUTABLE_PATH/"$OS_TYPE"-amd64-github-release.tar.bz2 "https://github.com/aktau/github-release/releases/download/$EXECUTABLE_VERSION/$OS_TYPE-amd64-github-release.tar.bz2" 
-				bzip2 -d $EXECUTABLE_PATH/"$OS_TYPE"-amd64-github-release.tar.bz2
-				tar -xvf $EXECUTABLE_PATH/"$OS_TYPE"-amd64-github-release.tar -C $EXECUTABLE_PATH/
-				mv $EXECUTABLE_PATH/bin/"$OS_TYPE"/amd64/github-release $EXECUTABLE_PATH/github-release
-				rm -R $EXECUTABLE_PATH/bin $EXECUTABLE_PATH/"$OS_TYPE"-amd64-github-release.tar
+				curl -OL "https://github.com/aktau/github-release/releases/download/$EXECUTABLE_VERSION/$OS_TYPE-amd64-github-release.tar.bz2" 
+				tar -zxvf "$OS_TYPE"-amd64-github-release.tar.bz2
+				mv bin/"$OS_TYPE"/amd64/github-release $EXECUTABLE_PATH
+				rm -R "$OS_TYPE"-amd64-github-release.tar.bz2 bin
 				echo " --- github-release executable now located in $EXECUTABLE_PATH --- "
-			elif [[ "$OS_TYPE" == "MinGW" ]]; then #windows section needs to be worked on
-				wget -O $EXECUTABLE_PATH/windows-amd64-github-release.zip "https://github.com/aktau/github-release/releases/download/v0.7.2/windows-amd64-github-release.zip" 
-				unzip $EXECUTABLE_PATH/windows-amd64-github-release.zip -d $EXECUTABLE_PATH/
-				mv $EXECUTABLE_PATH/bin/windows/amd64/github-release.exe $EXECUTABLE_PATH/
-				rm -R $EXECUTABLE_PATH/bin $EXECUTABLE_PATH/windows-amd64-github-release.zip
+			elif [[ "$OS_TYPE" == "mingw" ]]; then #haven't tested on windows
+				curl -OL "https://github.com/aktau/github-release/releases/download/v0.7.2/windows-amd64-github-release.zip" 
+				unzip windows-amd64-github-release.zip
+				mv bin/windows/amd64/github-release $EXECUTABLE_PATH
+				rm -R bin windows-amd64-github-release.zip
 				echo " --- github-release executable now located in $EXECUTABLE_PATH --- "
 			fi
 		else
