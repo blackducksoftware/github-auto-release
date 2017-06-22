@@ -99,7 +99,7 @@ fi
 
 shopt -s nocasematch
 if [[ "$BUILD_TOOL" == "maven" ]]; then 
-	RELEASE_VERSION=$(mvn help:evaluate -Dexpression=project.version | grep 'Building')
+	RELEASE_VERSION=$($M2_HOME/mvn help:evaluate -Dexpression=project.version | grep 'Building')
 	RELEASE_VERSION=$(echo $RELEASE_VERSION | awk {'print $NF'})
 elif [[ "$BUILD_TOOL" == "gradle" ]]; then
 	RELEASE_VERSION=$(./gradlew properties | grep ^version:)
