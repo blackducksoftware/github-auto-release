@@ -168,14 +168,14 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 		  	zip -r "$ARTIFACT_NAME".zip $ARTIFACT_DIRECTORY 
 		  	POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_NAME.zip" 2>&1)	
 		else 
-			ARTIFACT_FILE=$(find . -iname "$REPO_NAME-$RELEASE_VERSION.zip")
+			ARTIFACT_FILE=$(find . -iname "$REPO_NAME-$RELEASE_VERSION.zip" -print -quit)
 		
 			if [ -z "$ARTIFACT_FILE" ]; then #if .zip doesn't exist, look for .tar
-				ARTIFACT_FILE=$(find . -iname "$REPO_NAME-$RELEASE_VERSION.tar")
+				ARTIFACT_FILE=$(find . -iname "$REPO_NAME-$RELEASE_VERSION.tar" -print -quit)
 			fi
 
 			if [ -z "$ARTIFACT_FILE" ]; then #if neither .zip nor .tar, look for .jar
-				ARTIFACT_FILE=$(find . -iname "$REPO_NAME-$RELEASE_VERSION.jar")
+				ARTIFACT_FILE=$(find . -iname "$REPO_NAME-$RELEASE_VERSION.jar" -print -quit)
 			fi
 
 			if ! [ -z "$ARTIFACT_FILE" ]; then
@@ -185,15 +185,13 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 				POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_FILE" 2>&1)
 			else 
 				echo " --- No artifact files found. No artifact will be attached to release. --- "
-				POST_COMMAND_OUTPUT="null" #this can be taken away
+				echo " --- GitHub Autorelease Script Ending --- "
+				exit 0
 			fi		
 		fi
 
 		if [ -z "$POST_COMMAND_OUTPUT" ]; then
 			echo " --- Artifacts attached to release on GitHub --- "
-			echo " --- GitHub Autorelease Script Ending --- "
-			exit 0
-		elif [[ "$POST_COMMAND_OUTPUT" == "null" ]]; then
 			echo " --- GitHub Autorelease Script Ending --- "
 			exit 0
 		else
