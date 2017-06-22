@@ -8,6 +8,7 @@
 ## Parameters:
 ##		-b|--buildTool 						required: specify build tool (maven or gradle for now)
 ##		-f|--artifactFile        			optional: specify file path to project's artifact file (if build artifact is not standard, user can specify to make sure it is released) <CANNOT SPECIFY BOTH A DIRECTORY AND FILE>
+##		-t|--artifactType					optional: if file artifact file type is not .zip, .tar, or .jar, specify a file type here and the script will look for a file in workspace that follows the convention of REPO_NAME-RELEASE_VERSION with specified ending
 ##		-d|--artifactDirectory 				optional: specify a directory to be zipped and released <CANNOT SPECIFY BOTH A DIRECTORY AND FILE>
 ##		-m|--releaseDesc         			optional: add description for release to github
 ##		-o|--organization		   			optional: the name of the organization under which the repo is located (default is blackducksoftware)
@@ -24,6 +25,7 @@ GREEN='\033[0;32m'
 BUILD_TOOL=""
 ARTIFACT_FILE=""
 ARTIFACT_DIRECTORY=""
+ARTIFACT_TYPE=""
 DESCRIPTION="GitHub Autorelease"
 EXECUTABLE_VERSION="v0.7.2" #default to this because this is what script has been tested/based on
 EXECUTABLE_PATH=~/temp/blackducksoftware
@@ -51,6 +53,10 @@ do
         -d|artifactDirectory)
 			ARTIFACT_DIRECTORY=$VAL
 			echo "	- artifact directory: $ARTIFACT_DIRECTORY. Script will look for this exact directory. If it exists, it will zip and attach all contents to release."
+			;;
+        -t|--artifactType)
+			ARTIFACT_TYPE=$VAL
+			echo " - artifact type: $ARTIFACT_TYPE. Script will look for artifact with this ending and name of REPO_NAME-RELEASE_VERSION"
 			;;
         -f|--artifactFile)
             ARTIFACT_FILE=$VAL
@@ -166,7 +172,15 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 		  	ARTIFACT_DIRECTORY=$(find . -iname "$ARTIFACT_DIRECTORY")
 		  	ARTIFACT_NAME="$REPO_NAME"-"$RELEASE_VERSION"_"$TEMP"Dir.zip
 		  	zip -r "$ARTIFACT_NAME".zip $ARTIFACT_DIRECTORY 
+		  	echo "Artifact Directory: $ARTIFACT_DIRECTORY"
+			echo "Artifact Name: $ARTIFACT_NAME.zip"
 		  	POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_NAME.zip" 2>&1)	
+		elif ! [ -z "$ARTIFACT_TYPE" ]; then #UNTESTED
+			ARTIFACT_FILE=$(find . -iname "$REPO_NAME-$RELEASE_VERSION.$ARTIFACT_TYPE" -print -quit)
+			ARTIFACT_NAME=$(basename "$ARTIFACT_FILE")
+			echo "Artifact File: $ARTIFACT_FILE"
+			echo "Artifact Name: $ARTIFACT_NAME"
+			POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_FILE" 2>&1)	
 		else 
 			ARTIFACT_FILE=$(find . -iname "$REPO_NAME-$RELEASE_VERSION.zip" -print -quit)
 		
