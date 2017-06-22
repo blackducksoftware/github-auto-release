@@ -174,6 +174,10 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 				ARTIFACT_FILE=$(find . -iname "$REPO_NAME-$RELEASE_VERSION.tar")
 			fi
 
+			if [ -z "$ARTIFACT_FILE" ]; then #if neither .zip nor .tar, look for .jar
+				ARTIFACT_FILE=$(find . -iname "$REPO_NAME-$RELEASE_VERSION.jar")
+			fi
+
 			if ! [ -z "$ARTIFACT_FILE" ]; then
 				ARTIFACT_NAME=$(basename "$ARTIFACT_FILE")
 				echo "Artifact ARTIFACT_FILE: $ARTIFACT_FILE"
