@@ -122,38 +122,21 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 	EXECUTABLE_PATH_EXISTS=$(find $EXECUTABLE_PATH -name "github-release")
 	if [ -z "$EXECUTABLE_PATH_EXISTS" ]; then 
 		echo " --- github-release executable does not already exist on this machine --- "
-		GO=$(which go) #need to accomodate the windows equivalent
-		if [ -z "$GO" ]; then #if go isn't installed on the machine, pull binaries from releases directly
-			OS_TYPE=$(uname -a | awk {'print $1'}) 
-			OS_TYPE=$(echo "$OS_TYPE" | tr '[:upper:]' '[:lower:]') #convert OSTYPE to lower case
-			if [[ "$OS_TYPE" == "darwin" ]] || [[ "$OS_TYPE" == "linux" ]]; then
-				echo " --- Getting necessary github-release executable from github.com/aktau/github-release --- "
-				#curl -OL "https://github.com/aktau/github-release/releases/download/$EXECUTABLE_VERSION/$OS_TYPE-amd64-github-release.tar.bz2" 
-				curl --url "https://github.com/aktau/github-release/releases/download/$EXECUTABLE_VERSION/$OS_TYPE-amd64-github-release.tar.bz2" --output "$EXECUTABLE_PATH/$OS_TYPE-amd64-github-release.tar.bz2"
-				tar -zxvf "$EXECUTABLE_PATH/$OS_TYPE"-amd64-github-release.tar.bz2
-				#mv bin/"$OS_TYPE"/amd64/github-release $EXECUTABLE_PATH
-				rm -R "$EXECUTABLE_PATH/$OS_TYPE"-amd64-github-release.tar.bz2 bin
-				echo " --- github-release executable now located in $EXECUTABLE_PATH --- "
-			elif [[ "$OS_TYPE" == "mingw" ]]; then #haven't tested on windows
-				curl -OL "https://github.com/aktau/github-release/releases/download/v0.7.2/windows-amd64-github-release.zip" 
-				unzip windows-amd64-github-release.zip
-				mv bin/windows/amd64/github-release $EXECUTABLE_PATH
-				rm -R bin windows-amd64-github-release.zip
-				echo " --- github-release executable now located in $EXECUTABLE_PATH --- "
-			fi
-		else
-			echo " --- Getting executable via go command: go get github.com/aktau/github-release --- "
-			go get github.com/aktau/github-release
-			if [[ -z "$GOPATH" ]]; then
-				mv ~/go/bin/github-release $EXECUTABLE_PATH 
-				rm -rf ~/go/pkg/darwin_amd64
-				rm -rf ~/go/src/github.com/aktau ~/go/src/github.com/dustin ~/go/src/github.com/tomnomnom ~/go/src/github.com/voxelbrain
-			else
-				mv "$GOPATH"/bin/github-release $EXECUTABLE_PATH 
-				rm -rf "$GOPATH"/pkg/darwin_amd64
-				rm -rf "$GOPATH"/src/github.com/aktau "$GOPATH"/src/github.com/dustin "$GOPATH"/src/github.com/tomnomnom "$GOPATH"/src/github.com/voxelbrain
-			fi
-			echo " --- github-release executable now located in $EXECUTABLE_PATH --- "	
+		OS_TYPE=$(uname -a | awk {'print $1'}) 
+		OS_TYPE=$(echo "$OS_TYPE" | tr '[:upper:]' '[:lower:]') #convert OSTYPE to lower case
+		if [[ "$OS_TYPE" == "darwin" ]] || [[ "$OS_TYPE" == "linux" ]]; then
+			echo " --- Getting necessary github-release executable from github.com/aktau/github-release --- "
+			wget -O $EXECUTABLE_PATH/"$OS_TYPE"-amd64-github-release.tar.bz2 "https://github.com/aktau/github-release/releases/download/$EXECUTABLE_VERSION/$OS_TYPE-amd64-github-release.tar.bz2"
+            tar -xvf "$EXECUTABLE_PATH/$OS_TYPE"-amd64-github-release.tar.bz2 -C $EXECUTABLE_PATH
+            mv $EXECUTABLE_PATH/bin/"$OS_TYPE"/amd64/github-release $EXECUTABLE_PATH
+			rm -R "$EXECUTABLE_PATH/$OS_TYPE"-amd64-github-release.tar.bz2 bin
+			echo " --- github-release executable now located in $EXECUTABLE_PATH --- "
+		elif [[ "$OS_TYPE" == "mingw" ]]; then #haven't tested on windows
+			curl -OL "https://github.com/aktau/github-release/releases/download/v0.7.2/windows-amd64-github-release.zip" 
+			unzip windows-amd64-github-release.zip
+			mv bin/windows/amd64/github-release $EXECUTABLE_PATH
+			rm -R bin windows-amd64-github-release.zip
+			echo " --- github-release executable now located in $EXECUTABLE_PATH --- "
 		fi
 	fi
 
@@ -198,7 +181,7 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 				POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_FILE" 2>&1)
 			else 
 				echo " --- No artifact files found. No artifact will be attached to release. --- "
-				POST_COMMAND_OUTPUT="null"
+				POST_COMMAND_OUTPUT="null" #this can be taken away
 			fi		
 		fi
 
