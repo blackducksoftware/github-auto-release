@@ -33,7 +33,6 @@ DESCRIPTION="GitHub Autorelease"
 EXECUTABLE_VERSION="v0.7.2" #default to this because this is what script has been tested/based on
 EXECUTABLE_PATH=~/temp/blackducksoftware
 ORGANIZATION="patrickwilliamconway" #final version this will be blackducksoftware
-export GITHUB_TOKEN=f7dff5b47720bff216521c3840611fd718edead7
 
 echo " --- Starting GitHub Autorelease Script --- " 
 
