@@ -8,7 +8,7 @@
 ## Parameters:
 ##		-b|--buildTool 						required: specify build tool (maven or gradle for now)
 ##		-f|--artifactFile        			optional: specify file path to project's artifact file (if build artifact is not standard, user can specify to make sure it is released) <CANNOT SPECIFY BOTH A DIRECTORY AND FILE>
-##		-t|--artifactType					optional: if file artifact file type is not .zip, .tar, or .jar, specify a file type here and the script will look for a file in workspace that follows the convention of REPO_NAME-RELEASE_VERSION with specified ending	
+##		-t|--artifactType					optional: if file artifact file type is not .zip, .tar, or .jar, specify a file type here and the script will look for a file in workspace that follows the convention of REPO_NAME-RELEASE_VERSION with specified ending
 ##		-d|--artifactDirectory 				optional: specify a directory to be zipped and released <CANNOT SPECIFY BOTH A DIRECTORY AND FILE>
 ##												*note that there are more multiple directories with subdirectories of the same name, then you must specify assembly/target, or similar
 ##		-p|--project						conditionally required: IF using a NuGet project, you must provide a project name
@@ -16,13 +16,7 @@
 ##		-o|--organization		   			optional: the name of the organization under which the repo is located (default is blackducksoftware)
 ##		-ev|--executableVersion   			optional: which version of the GitHub-Release executable to be used (default is v0.7.2 because that is the version this script is being tested with)
 ##		-ep|--executablePath 	   			optional: where on the user's machine the GitHub-Release executable will live (defualt is set to ~/temp/blackducksoftware)
-################################################################################################################################################################################################
-
-BLUE='\033[0;34m'
-NC='\033[0m'
-YELLOW='\033[0;33m'
-RED='\033[0;31m' 
-GREEN='\033[0;32m' 
+################################################################################################################################################################################################ 
 
 BUILD_TOOL=""
 ARTIFACT_FILE=""
@@ -50,6 +44,9 @@ do
     fi
 
     case $FLAG in
+    	-g) 
+			export GITHUB_TOKEN=$VAL
+			;;
         -b|--buildTool) 
             BUILD_TOOL=$VAL
             ;;
@@ -67,7 +64,7 @@ do
             ;;
         -p|--nugetProject)
 			NUGET_PROJECT=$VAL
-			echo "  - NuGet project name: $NUGET_PROJECT."
+			echo " - NuGet project: $NUGET_PROJECT."
 			;;
         -m|--releaseDesc) #rename
             DESCRIPTION=$VAL
@@ -89,7 +86,6 @@ do
 			echo "-b|--buildTool 					required: specify build tool"
 			echo "-f|--artifactFile        			optional: specify file path to project's artifact file"
 			echo "-d|--artifactDirectory 				optional: specify a directory to be zipped and released <CANNOT SPECIFY BOTH A DIRECTORY AND FILE>"
-			echo "-p|--project						conditionally required: IF using a NuGet project, you must provide a project name"
 			echo "-m|--releaseDesc         			optional: add description for release to github" 
 			echo "-o|--organization		   		optional: the name of the organization under which the repo is located (default is blackducksoftware)"
 			echo "-ev|--executableVersion   			optional: which version of the GitHub-Release executable to be used (default is v0.7.2)"
@@ -189,36 +185,21 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 			POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_FILE" 2>&1)	
 		elif ! [ -z "$ARTIFACT_DIRECTORY" ]; then
 			
-			if [[ "$ARTIFACT_DIRECTORY" == *"/"* ]];then
-				TEMP=$(basename "$ARTIFACT_DIRECTORY")
-				ARTIFACT_DIRECTORY=$(dirname "$ARTIFACT_DIRECTORY")
-				ARTIFACT_DIRECTORY=$(find "$ARTIFACT_DIRECTORY" -iname "$TEMP" -print -quit)
-			else 
-				TEMP=$ARTIFACT_DIRECTORY
-		  		ARTIFACT_DIRECTORY=$(find . -iname "$ARTIFACT_DIRECTORY")
+			if ! [ -z "$ARTIFACT_TYPE" ]; then
+				FILE_REGEX=$(echo $ARTIFACT_TYPE | sed 's/\.[^.]*$//')				
+				if [ -z $FILE_REGEX ]; then #if regex is NOT given for file name, look for default convention
+					ARTIFACT_FILE=$(find "$ARTIFACT_DIRECTORY" -iname "$REPO_NAME-$RELEASE_VERSION$ARTIFACT_TYPE" -print -quit)
+				else 
+					ARTIFACT_FILE=$(find "$ARTIFACT_DIRECTORY" -iname "$ARTIFACT_TYPE")
+				fi 
+				ARTIFACT_NAME=$(basename "$ARTIFACT_FILE")
+				echo "Artifact File: $ARTIFACT_FILE"
+				echo "Artifact Name: $ARTIFACT_NAME"
 			fi
 
-			ARTIFACT_NAME="$REPO_NAME"-"$RELEASE_VERSION"_"$TEMP"
-			zip -r "$ARTIFACT_NAME".zip $ARTIFACT_DIRECTORY
-		  	echo "Artifact Directory: $ARTIFACT_DIRECTORY"
-			echo "Artifact Name: $ARTIFACT_NAME.zip"
-		  	POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_NAME.zip" 2>&1)	
-		elif ! [ -z "$ARTIFACT_TYPE" ]; then #UNTESTED
-			ARTIFACT_FILE=$(find . -iname "$REPO_NAME-$RELEASE_VERSION.$ARTIFACT_TYPE" -print -quit)
-			ARTIFACT_NAME=$(basename "$ARTIFACT_FILE")
-			echo "Artifact File: $ARTIFACT_FILE"
-			echo "Artifact Name: $ARTIFACT_NAME"
-			POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_FILE" 2>&1)	
+			POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_NAME" 2>&1)	
 		else 
-			ARTIFACT_FILE=$(find . -iname "$REPO_NAME-$RELEASE_VERSION.zip" -print -quit)
-		
-			if [ -z "$ARTIFACT_FILE" ]; then #if .zip doesn't exist, look for .tar
-				ARTIFACT_FILE=$(find . -iname "$REPO_NAME-$RELEASE_VERSION.tar" -print -quit)
-			fi
-
-			if [ -z "$ARTIFACT_FILE" ]; then #if neither .zip nor .tar, look for .jar
-				ARTIFACT_FILE=$(find . -iname "$REPO_NAME-$RELEASE_VERSION.jar" -print -quit)
-			fi
+			ARTIFACT_FILE=$(find . \( -iname "$REPO_NAME-$RELEASE_VERSION.zip" -o -iname "$REPO_NAME-$RELEASE_VERSION.tar" \) -print -quit)
 
 			if ! [ -z "$ARTIFACT_FILE" ]; then
 				ARTIFACT_NAME=$(basename "$ARTIFACT_FILE")
