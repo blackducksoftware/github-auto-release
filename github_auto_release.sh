@@ -10,6 +10,7 @@
 ##		-f|--artifactFile        			optional: specify file path to project's artifact file (if build artifact is not standard, user can specify to make sure it is released) <CANNOT SPECIFY BOTH A DIRECTORY AND FILE>
 ##		-t|--artifactType					optional: if file artifact file type is not .zip, .tar, or .jar, specify a file type here and the script will look for a file in workspace that follows the convention of REPO_NAME-RELEASE_VERSION with specified ending
 ##		-d|--artifactDirectory 				optional: specify a directory to be zipped and released <CANNOT SPECIFY BOTH A DIRECTORY AND FILE>
+##												*note that there are more multiple directories with subdirectories of the same name, then you must specify assembly/target, or similar
 ##		-m|--releaseDesc         			optional: add description for release to github
 ##		-o|--organization		   			optional: the name of the organization under which the repo is located (default is blackducksoftware)
 ##		-ev|--executableVersion   			optional: which version of the GitHub-Release executable to be used (default is v0.7.2 because that is the version this script is being tested with)
@@ -157,7 +158,7 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 	echo "Repository Name: $REPO_NAME"
 	echo "Release Version: $RELEASE_VERSION"
 
-	RELEASE_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release release --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $RELEASE_VERSION --description "$DESCRIPTION" 2>&1)
+	#RELEASE_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release release --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $RELEASE_VERSION --description "$DESCRIPTION" 2>&1)
 	if [ -z "$RELEASE_COMMAND_OUTPUT" ]; then
 		echo " --- Release posted to GitHub --- "
 
@@ -166,21 +167,28 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 			ARTIFACT_NAME=$(basename "$ARTIFACT_FILE")
 			echo "Artifact File: $ARTIFACT_FILE"
 			echo "Artifact Name: $ARTIFACT_NAME"
-			POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_FILE" 2>&1)	
+			#POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_FILE" 2>&1)	
 		elif ! [ -z "$ARTIFACT_DIRECTORY" ]; then
-			TEMP=$ARTIFACT_DIRECTORY
-		  	ARTIFACT_DIRECTORY=$(find . -iname "$ARTIFACT_DIRECTORY")
-		  	ARTIFACT_NAME="$REPO_NAME"-"$RELEASE_VERSION"_"$TEMP"Dir.zip
-		  	zip -r "$ARTIFACT_NAME".zip $ARTIFACT_DIRECTORY 
+			if [[ "$ARTIFACT_DIRECTORY" == *"/"* ]];then
+				TEMP=$(basename "$ARTIFACT_DIRECTORY")
+				ARTIFACT_DIRECTORY=$(dirname "$ARTIFACT_DIRECTORY")
+				ARTIFACT_DIRECTORY=$(find "$ARTIFACT_DIRECTORY" -iname "$TEMP" -print -quit)
+			else 
+				TEMP=$ARTIFACT_DIRECTORY
+		  		ARTIFACT_DIRECTORY=$(find . -iname "$ARTIFACT_DIRECTORY")
+			fi
+
+			ARTIFACT_NAME="$REPO_NAME"-"$RELEASE_VERSION"_"$TEMP"
+			zip -r "$ARTIFACT_NAME".zip $ARTIFACT_DIRECTORY
 		  	echo "Artifact Directory: $ARTIFACT_DIRECTORY"
 			echo "Artifact Name: $ARTIFACT_NAME.zip"
-		  	POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_NAME.zip" 2>&1)	
+		  	#POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_NAME.zip" 2>&1)	
 		elif ! [ -z "$ARTIFACT_TYPE" ]; then #UNTESTED
 			ARTIFACT_FILE=$(find . -iname "$REPO_NAME-$RELEASE_VERSION.$ARTIFACT_TYPE" -print -quit)
 			ARTIFACT_NAME=$(basename "$ARTIFACT_FILE")
 			echo "Artifact File: $ARTIFACT_FILE"
 			echo "Artifact Name: $ARTIFACT_NAME"
-			POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_FILE" 2>&1)	
+			#POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_FILE" 2>&1)	
 		else 
 			ARTIFACT_FILE=$(find . -iname "$REPO_NAME-$RELEASE_VERSION.zip" -print -quit)
 		
@@ -196,7 +204,7 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 				ARTIFACT_NAME=$(basename "$ARTIFACT_FILE")
 				echo "Artifact ARTIFACT_FILE: $ARTIFACT_FILE"
 				echo "Artifact Name: $ARTIFACT_NAME" 
-				POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_FILE" 2>&1)
+				#POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_FILE" 2>&1)
 			else 
 				echo " --- No artifact files found. No artifact will be attached to release. --- "
 				echo " --- GitHub Autorelease Script Ending --- "
