@@ -1,6 +1,6 @@
 ###############################################################################################################################################################################################
 ## BlackDuck Github Auto Release 
-## v0.0.5
+## v0.0.6
 ##
 ## Purpose: Automatically release build artifacts to GitHub on stable, non-SNAPSHOT, project builds. Uses the following project: https://github.com/aktau/github-release. 
 ##
@@ -52,11 +52,11 @@ do
             ;;
         -d|artifactDirectory)
 			ARTIFACT_DIRECTORY=$VAL
-			echo "	- artifact directory: $ARTIFACT_DIRECTORY. Script will look for this exact directory. If it exists, it will zip and attach all contents to release."
+			echo "	- artifact directory: $ARTIFACT_DIRECTORY. Script will look for this exact directory."
 			;;
         -t|--artifactType)
 			ARTIFACT_TYPE=$VAL
-			echo " - artifact type: $ARTIFACT_TYPE. Script will look for artifact with this ending and name of REPO_NAME-RELEASE_VERSION"
+			echo "	- artifact type: $ARTIFACT_TYPE. Script will look for this type of file."
 			;;
         -f|--artifactFile)
             ARTIFACT_FILE=$VAL
@@ -117,7 +117,7 @@ if [[ "$BUILD_TOOL" == "maven" ]]; then
 elif [[ "$BUILD_TOOL" == "gradle" ]]; then
 	RELEASE_VERSION=$(./gradlew properties | grep ^version:)
 	RELEASE_VERSION=${RELEASE_VERSION##* }
-elif [[ "$BUILD_TOOL" == "nuget" ]]; then 
+elif [[ "$BUILD_TOOL" == "nuget" ]]; then #how can I tell if this is a snapshot or not?
 	RELEASE_VERSION=$(find "$NUGET_PROJECT/Properties" -iname "AssemblyInfo.cs")
 	RELEASE_VERSION=$(grep "^\[assembly: AssemblyVersion(" $RELEASE_VERSION)
 	RELEASE_VERSION=$(echo $RELEASE_VERSION | awk -F "[()]" '{ for (i=2; i<NF; i+=2) print $i }')
@@ -183,24 +183,29 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 			echo "Artifact File: $ARTIFACT_FILE"
 			echo "Artifact Name: $ARTIFACT_NAME"
 			POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_FILE" 2>&1)	
-		elif ! [ -z "$ARTIFACT_DIRECTORY" ]; then
+		elif ! [ -z "$ARTIFACT_DIRECTORY" ] && ! [ -z "$ARTIFACT_TYPE" ]; then
+			FILE_REGEX=$(echo $ARTIFACT_TYPE | sed 's/\.[^.]*$//') #truncates everything after the ".FileExtension"			
+			if [ -z $FILE_REGEX ]; then #if regex is NOT given for file name, look for default convention
+				ARTIFACT_FILE=$(find "$ARTIFACT_DIRECTORY" -iname "$REPO_NAME-$RELEASE_VERSION$ARTIFACT_TYPE" -print -quit) #take the first one because they are all going to be the same
+			else 
+				ARTIFACT_FILE=$(find "$ARTIFACT_DIRECTORY" -iname "$ARTIFACT_TYPE") #if more than one show up, error out
+			fi 
 			
-			if ! [ -z "$ARTIFACT_TYPE" ]; then
-				FILE_REGEX=$(echo $ARTIFACT_TYPE | sed 's/\.[^.]*$//')				
-				if [ -z $FILE_REGEX ]; then #if regex is NOT given for file name, look for default convention
-					ARTIFACT_FILE=$(find "$ARTIFACT_DIRECTORY" -iname "$REPO_NAME-$RELEASE_VERSION$ARTIFACT_TYPE" -print -quit)
-				else 
-					ARTIFACT_FILE=$(find "$ARTIFACT_DIRECTORY" -iname "$ARTIFACT_TYPE")
-				fi 
+			if [ $(echo $ARTIFACT_FILE | wc -w) -gt 1 ]; then 
+				echo " --- ERROR: More than one file found matching $FILE_REGEX: --- "
+				echo "$ARTIFACT_FILE"
+				exit 1;
+			elif [ $(echo $ARTIFACT_FILE | wc -w) -eq 0 ]; then
+				echo " --- ERROR: NO files found matching $FILE_REGEX --- "
+				exit 1;
+			else 
 				ARTIFACT_NAME=$(basename "$ARTIFACT_FILE")
 				echo "Artifact File: $ARTIFACT_FILE"
 				echo "Artifact Name: $ARTIFACT_NAME"
+				POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_FILE" 2>&1)	
 			fi
-
-			POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_NAME" 2>&1)	
 		else 
 			ARTIFACT_FILE=$(find . \( -iname "$REPO_NAME-$RELEASE_VERSION.zip" -o -iname "$REPO_NAME-$RELEASE_VERSION.tar" \) -print -quit)
-
 			if ! [ -z "$ARTIFACT_FILE" ]; then
 				ARTIFACT_NAME=$(basename "$ARTIFACT_FILE")
 				echo "Artifact ARTIFACT_FILE: $ARTIFACT_FILE"
@@ -208,14 +213,14 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 				POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_FILE" 2>&1)
 			else 
 				echo " --- No artifact files found. No artifact will be attached to release. --- "
-				echo " --- GitHub Autorelease Script Ending --- "
+				echo " --- Ending GitHub Autorelease Script --- "
 				exit 0
 			fi		
 		fi
 
 		if [ -z "$POST_COMMAND_OUTPUT" ]; then
 			echo " --- Artifacts attached to release on GitHub --- "
-			echo " --- GitHub Autorelease Script Ending --- "
+			echo " --- Ending GitHub Autorelease Script --- "
 			exit 0
 		else
 			echo " --- $POST_COMMAND_OUTPUT --- "
@@ -229,5 +234,6 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 
 else
 	echo " --- SNAPSHOT found in version name OR version name doesn't follow convention x.y.z where x,y,z are integers separated by .'s - ($RELEASE_VERSION) - NOT releasing to GitHub --- "
+	exit 0
 fi
 
