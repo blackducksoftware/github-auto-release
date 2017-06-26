@@ -24,9 +24,9 @@ ARTIFACT_DIRECTORY=""
 ARTIFACT_TYPE=""
 NUGET_PROJECT=""
 DESCRIPTION="GitHub Autorelease"
-EXECUTABLE_VERSION="v0.7.2" #default to this because this is what script has been tested/based on
+EXECUTABLE_VERSION="v0.7.2" #script built/tested on this
 EXECUTABLE_PATH=~/temp/blackducksoftware
-ORGANIZATION="patrickwilliamconway" #final version this will be blackducksoftware
+ORGANIZATION="patrickwilliamconway" 
 
 echo " --- Starting GitHub Autorelease Script --- " 
 
@@ -44,23 +44,20 @@ do
     fi
 
     case $FLAG in
-    	-g) 
-			export GITHUB_TOKEN=$VAL
-			;;
         -b|--buildTool) 
             BUILD_TOOL=$VAL
             ;;
         -d|artifactDirectory)
 			ARTIFACT_DIRECTORY=$VAL
-			echo "	- artifact directory: $ARTIFACT_DIRECTORY. Script will look for this exact directory."
+			echo "	- Artifact directory: $ARTIFACT_DIRECTORY. Script will look for this exact directory."
 			;;
         -t|--artifactType)
 			ARTIFACT_TYPE=$VAL
-			echo "	- artifact type: $ARTIFACT_TYPE. Script will look for this type of file."
+			echo "	- Artifact type: $ARTIFACT_TYPE. Script will look for this type of file."
 			;;
         -f|--artifactFile)
             ARTIFACT_FILE=$VAL
-            echo "	- artifact file path: $ARTIFACT_FILE. Script will look for this exact build artifact."
+            echo "	- Artifact file path: $ARTIFACT_FILE. Script will look for this exact build artifact."
             ;;
         -p|--nugetProject)
 			NUGET_PROJECT=$VAL
@@ -71,21 +68,22 @@ do
             ;;
        	-o|--organization)
 			ORGANIZATION=$VAL
-			echo "	- organization that owns repository: $ORGANIZATION"
+			echo "	- Organization that owns repository: $ORGANIZATION"
 			;;
         -ev|--executableVersion)
 			EXECUTABLE_VERSION=$VAL
-			echo "	- github-release executable version: $EXECUTABLE_VERSION"
+			echo "	- Github-release executable version: $EXECUTABLE_VERSION"
 			;;
 		-ep|--executablePath)
 			EXECUTABLE_PATH=$VAL
-			echo "	- github-release excutable location path: $EXECUTABLE_PATH"
+			echo "	- Github-release excutable location path: $EXECUTABLE_PATH"
 			;;
         -h|--help) 
             echo "HELP MENU - options"
 			echo "-b|--buildTool 					required: specify build tool"
 			echo "-f|--artifactFile        			optional: specify file path to project's artifact file"
 			echo "-d|--artifactDirectory 				optional: specify a directory to be zipped and released <CANNOT SPECIFY BOTH A DIRECTORY AND FILE>"
+			echo "-t|--artifactType 				optional: specify a file type for script to find, or specify a regex for a file name. ex. '.jar' OR '*repo-name*.jar' "
 			echo "-m|--releaseDesc         			optional: add description for release to github" 
 			echo "-o|--organization		   		optional: the name of the organization under which the repo is located (default is blackducksoftware)"
 			echo "-ev|--executableVersion   			optional: which version of the GitHub-Release executable to be used (default is v0.7.2)"
@@ -93,7 +91,7 @@ do
 			exit 1
 			;;
 		*)
-			echo " --- ERROR: unrecognized flag variable in Flag/Value pair: < $FLAG, $VAL > --- "
+			echo " --- ERROR: unrecognized FLAG variable in Flag/Value pair: < $FLAG, $VAL > --- "
 			exit 1
 			;;
     esac
@@ -182,6 +180,7 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 			ARTIFACT_NAME=$(basename "$ARTIFACT_FILE")
 			echo "Artifact File: $ARTIFACT_FILE"
 			echo "Artifact Name: $ARTIFACT_NAME"
+
 			POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_FILE" 2>&1)	
 		elif ! [ -z "$ARTIFACT_DIRECTORY" ] && ! [ -z "$ARTIFACT_TYPE" ]; then
 			FILE_REGEX=$(echo $ARTIFACT_TYPE | sed 's/\.[^.]*$//') #truncates everything after the ".FileExtension"			
