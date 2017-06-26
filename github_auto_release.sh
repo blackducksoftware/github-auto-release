@@ -8,9 +8,11 @@
 ## Parameters:
 ##		-b|--buildTool 						required: specify build tool (maven or gradle for now)
 ##		-f|--artifactFile        			optional: specify file path to project's artifact file (if build artifact is not standard, user can specify to make sure it is released) <CANNOT SPECIFY BOTH A DIRECTORY AND FILE>
-##		-t|--artifactType					optional: if file artifact file type is not .zip, .tar, or .jar, specify a file type here and the script will look for a file in workspace that follows the convention of REPO_NAME-RELEASE_VERSION with specified ending
-##		-d|--artifactDirectory 				optional: specify a directory to be zipped and released <CANNOT SPECIFY BOTH A DIRECTORY AND FILE>
-##												*note that there are more multiple directories with subdirectories of the same name, then you must specify assembly/target, or similar
+##		-t|--artifactType					conditionally optional <if specified, artifactDirectory must also be specified>: if file artifact file type is not .zip, .tar, or .jar, specify a file type here and the script will look for a file in workspace that follows the convention of REPO_NAME-RELEASE_VERSION with specified ending
+##												*you may define as .jar to look for file with name repo_name-release_version.jar, or define regex.jar to find a jar file that matches given regex (ex. *.jar matches any jar with any name)
+##		-d|--artifactDirectory 				conditionally optional <if specified, artifactType must also be specified>: specify a directory to be zipped and released <CANNOT SPECIFY BOTH A DIRECTORY AND FILE>
+##												*note that if there are more multiple directories with subdirectories of the same name, then you must specify assembly/target, or similar
+##												*define file paths as follows sub1/sub2/sub3 ...
 ##		-p|--project						conditionally required: IF using a NuGet project, you must provide a project name
 ##		-m|--releaseDesc         			optional: add description for release to github
 ##		-o|--organization		   			optional: the name of the organization under which the repo is located (default is blackducksoftware)
@@ -26,7 +28,7 @@ NUGET_PROJECT=""
 DESCRIPTION="GitHub Autorelease"
 EXECUTABLE_VERSION="v0.7.2" #script built/tested on this
 EXECUTABLE_PATH=~/temp/blackducksoftware
-ORGANIZATION="patrickwilliamconway" 
+ORGANIZATION="blackducksoftware" 
 
 echo " --- Starting GitHub Autorelease Script --- " 
 
@@ -82,8 +84,8 @@ do
             echo "HELP MENU - options"
 			echo "-b|--buildTool 					required: specify build tool"
 			echo "-f|--artifactFile        			optional: specify file path to project's artifact file"
-			echo "-d|--artifactDirectory 				optional: specify a directory to be zipped and released <CANNOT SPECIFY BOTH A DIRECTORY AND FILE>"
-			echo "-t|--artifactType 				optional: specify a file type for script to find, or specify a regex for a file name. ex. '.jar' OR '*repo-name*.jar' "
+			echo "-d|--artifactDirectory 				conditionally optional <if specified, artifactType must also be specified>: specify a directory to be zipped and released <CANNOT SPECIFY BOTH A DIRECTORY AND FILE>"
+			echo "-t|--artifactType 				conditionally optional <if specified, artifactDirectory must also be specified>: specify a file type for script to find, or specify a regex for a file name. ex. '.jar' OR '*repo-name*.jar' "
 			echo "-m|--releaseDesc         			optional: add description for release to github" 
 			echo "-o|--organization		   		optional: the name of the organization under which the repo is located (default is blackducksoftware)"
 			echo "-ev|--executableVersion   			optional: which version of the GitHub-Release executable to be used (default is v0.7.2)"
@@ -100,10 +102,10 @@ done
 if [[ -z "$BUILD_TOOL" ]]; then 
     echo " --- ERROR: BUILD_TOOL ($BUILD_TOOL) (-b|--buildTool) must be specified --- "
     exit 1
-elif [ "$BUILD_TOOL" == "nuget" ] && [ -z "$NUGET_PROJECT" ]; then
+elif [[ "$BUILD_TOOL" == "nuget" ]] && [[ -z "$NUGET_PROJECT" ]]; then
 	echo " -- ERROR: With nuget project, you MUST specify a project name."
 	exit 1
-elif ! [ -z "$ARTIFACT_DIRECTORY" ] && ! [ -z "$ARTIFACT_FILE"]; then
+elif ! [[ -z "$ARTIFACT_DIRECTORY" ]] && ! [[ -z "$ARTIFACT_FILE" ]]; then
 	echo " --- ERROR: ARTIFACT_DIRECTORY ($ARTIFACT_DIRECTORY) (-d|--artifactDirectory) and ARTIFACT_FILE ($ARTIFACT_FILE) (-f|--artifactFile) cannot both be specified --- "
 	exit 1
 fi
@@ -115,7 +117,7 @@ if [[ "$BUILD_TOOL" == "maven" ]]; then
 elif [[ "$BUILD_TOOL" == "gradle" ]]; then
 	RELEASE_VERSION=$(./gradlew properties | grep ^version:)
 	RELEASE_VERSION=${RELEASE_VERSION##* }
-elif [[ "$BUILD_TOOL" == "nuget" ]]; then #how can I tell if this is a snapshot or not?
+elif [[ "$BUILD_TOOL" == "nuget" ]]; then 
 	RELEASE_VERSION=$(find "$NUGET_PROJECT/Properties" -iname "AssemblyInfo.cs")
 	RELEASE_VERSION=$(grep "^\[assembly: AssemblyVersion(" $RELEASE_VERSION)
 	RELEASE_VERSION=$(echo $RELEASE_VERSION | awk -F "[()]" '{ for (i=2; i<NF; i+=2) print $i }')
@@ -147,8 +149,8 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 		if [[ "$OS_TYPE" == "darwin" ]] || [[ "$OS_TYPE" == "linux" ]]; then
 			echo " --- Getting necessary github-release executable from github.com/aktau/github-release --- "
 			wget -O $EXECUTABLE_PATH/"$OS_TYPE"-amd64-github-release.tar.bz2 "https://github.com/aktau/github-release/releases/download/$EXECUTABLE_VERSION/$OS_TYPE-amd64-github-release.tar.bz2"
-           		tar -xvf "$EXECUTABLE_PATH/$OS_TYPE"-amd64-github-release.tar.bz2 -C $EXECUTABLE_PATH
-           		mv $EXECUTABLE_PATH/bin/"$OS_TYPE"/amd64/github-release $EXECUTABLE_PATH
+           	tar -xvf "$EXECUTABLE_PATH/$OS_TYPE"-amd64-github-release.tar.bz2 -C $EXECUTABLE_PATH
+           	mv $EXECUTABLE_PATH/bin/"$OS_TYPE"/amd64/github-release $EXECUTABLE_PATH
 			rm -rf "$EXECUTABLE_PATH/$OS_TYPE"-amd64-github-release.tar.bz2 bin
 			echo " --- github-release executable now located in $EXECUTABLE_PATH --- "
 		elif [[ "$OS_TYPE" == "mingw" ]]; then #haven't tested on windows
