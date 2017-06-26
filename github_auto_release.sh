@@ -28,20 +28,6 @@ EXECUTABLE_VERSION="v0.7.2" #script built/tested on this
 EXECUTABLE_PATH=~/temp/blackducksoftware
 ORGANIZATION="patrickwilliamconway" 
 
-
-
-
-#################### REMOVE BEFORE COMMIT ######################
-export GITHUB_TOKEN=4d9b1c1492dfea4d912ee395865ea3ce5be0cfe2
-#################### REMOVE BEFORE COMMIT ######################
-
-
-
-
-
-
-
-
 echo " --- Starting GitHub Autorelease Script --- " 
 
 ####################################	PARSING INPUT PARAMETERS 		#####################################
