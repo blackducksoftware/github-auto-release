@@ -28,6 +28,20 @@ EXECUTABLE_VERSION="v0.7.2" #script built/tested on this
 EXECUTABLE_PATH=~/temp/blackducksoftware
 ORGANIZATION="patrickwilliamconway" 
 
+
+
+
+#################### REMOVE BEFORE COMMIT ######################
+export GITHUB_TOKEN=4d9b1c1492dfea4d912ee395865ea3ce5be0cfe2
+#################### REMOVE BEFORE COMMIT ######################
+
+
+
+
+
+
+
+
 echo " --- Starting GitHub Autorelease Script --- " 
 
 ####################################	PARSING INPUT PARAMETERS 		#####################################
@@ -97,7 +111,7 @@ do
     esac
 done
 
-if [ -z "$BUILD_TOOL" ]; then 
+if [[ -z "$BUILD_TOOL" ]]; then 
     echo " --- ERROR: BUILD_TOOL ($BUILD_TOOL) (-b|--buildTool) must be specified --- "
     exit 1
 elif [ "$BUILD_TOOL" == "nuget" ] && [ -z "$NUGET_PROJECT" ]; then
@@ -172,33 +186,32 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 	echo "Release Version: $RELEASE_VERSION"
 
 	RELEASE_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release release --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $RELEASE_VERSION --description "$DESCRIPTION" 2>&1)
-	if [ -z "$RELEASE_COMMAND_OUTPUT" ]; then
+	if [[ -z "$RELEASE_COMMAND_OUTPUT" ]]; then
 		echo " --- Release posted to GitHub --- "
 
-		if ! [ -z "$ARTIFACT_FILE" ]; then #locating specific file
+		if ! [[ -z "$ARTIFACT_FILE" ]]; then #locating specific file
 			ARTIFACT_FILE=$(find . -iname "$ARTIFACT_FILE")
 		elif ! [ -z "$ARTIFACT_DIRECTORY" ] && ! [ -z "$ARTIFACT_TYPE" ]; then #looking for file pattern in given directory
 			FILE_REGEX=$(echo $ARTIFACT_TYPE | sed 's/\.[^.]*$//') #truncates everything after the ".FileExtension"			
-			echo "$FILE_REGEX"
-			if [ -z $FILE_REGEX ]; then 
+			if [[ -z $FILE_REGEX ]]; then 
 				ARTIFACT_FILE=$(find "$ARTIFACT_DIRECTORY" -iname "$REPO_NAME-$RELEASE_VERSION$ARTIFACT_TYPE")
 			else 
 				ARTIFACT_FILE=$(find "$ARTIFACT_DIRECTORY" -iname "$ARTIFACT_TYPE")
 			fi 
 		else #default case - look for .zip or .tar of repo_name-release_version
 			ARTIFACT_FILE=$(find . \( -iname "$REPO_NAME-$RELEASE_VERSION.zip" -o -iname "$REPO_NAME-$RELEASE_VERSION.tar" \) -print -quit)
-			if [ -z "$ARTIFACT_FILE" ]; then
+			if [[ -z "$ARTIFACT_FILE" ]]; then
 				echo " --- No artifact files found. No artifact will be attached to release. --- "
 				echo " --- Ending GitHub Autorelease Script --- "
 				exit 0
 			fi		
 		fi
 
-		if [ $(echo $ARTIFACT_FILE | wc -w) -gt 1 ]; then 
+		if [[ $(echo $ARTIFACT_FILE | wc -w) -gt 1 ]]; then 
 			echo " --- ERROR: More than one file found matching $FILE_REGEX: --- "
 			echo "$ARTIFACT_FILE"
 			exit 1;
-		elif [ $(echo $ARTIFACT_FILE | wc -w) -eq 0 ]; then
+		elif [[ $(echo $ARTIFACT_FILE | wc -w) -eq 0 ]]; then
 			echo " --- ERROR: NO files found matching $FILE_REGEX --- "
 			exit 1;
 		else 	
@@ -207,7 +220,7 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 			echo "Artifact Name: $ARTIFACT_NAME"
 			POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_FILE" 2>&1)	
 			
-			if [ -z "$POST_COMMAND_OUTPUT" ]; then
+			if [[ -z "$POST_COMMAND_OUTPUT" ]]; then
 				echo " --- Artifacts attached to release on GitHub --- "
 				echo " --- Ending GitHub Autorelease Script --- "
 				exit 0
