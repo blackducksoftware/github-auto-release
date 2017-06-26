@@ -175,16 +175,17 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 	if [ -z "$RELEASE_COMMAND_OUTPUT" ]; then
 		echo " --- Release posted to GitHub --- "
 
-		if ! [ -z "$ARTIFACT_FILE" ]; then 
+		if ! [ -z "$ARTIFACT_FILE" ]; then #locating specific file
 			ARTIFACT_FILE=$(find . -iname "$ARTIFACT_FILE")
-		elif ! [ -z "$ARTIFACT_DIRECTORY" ] && ! [ -z "$ARTIFACT_TYPE" ]; then
+		elif ! [ -z "$ARTIFACT_DIRECTORY" ] && ! [ -z "$ARTIFACT_TYPE" ]; then #looking for file pattern in given directory
 			FILE_REGEX=$(echo $ARTIFACT_TYPE | sed 's/\.[^.]*$//') #truncates everything after the ".FileExtension"			
+			echo "$FILE_REGEX"
 			if [ -z $FILE_REGEX ]; then 
 				ARTIFACT_FILE=$(find "$ARTIFACT_DIRECTORY" -iname "$REPO_NAME-$RELEASE_VERSION$ARTIFACT_TYPE")
 			else 
 				ARTIFACT_FILE=$(find "$ARTIFACT_DIRECTORY" -iname "$ARTIFACT_TYPE")
 			fi 
-		else 
+		else #default case - look for .zip or .tar of repo_name-release_version
 			ARTIFACT_FILE=$(find . \( -iname "$REPO_NAME-$RELEASE_VERSION.zip" -o -iname "$REPO_NAME-$RELEASE_VERSION.tar" \) -print -quit)
 			if [ -z "$ARTIFACT_FILE" ]; then
 				echo " --- No artifact files found. No artifact will be attached to release. --- "
