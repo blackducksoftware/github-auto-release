@@ -125,7 +125,7 @@ elif [[ "$BUILD_TOOL" == "nuget" ]]; then #how can I tell if this is a snapshot 
 		RELEASE_VERSION=$(echo $RELEASE_VERSION | sed 's/\.[^.]*$//')
 	fi 
 else 
-	echo " --- ERROR: build tool must either be maven or gradle (you entered: $BUILD_TOOL) --- "
+	echo " --- ERROR: build tool must either be maven, gradle, or nuget. (you entered: $BUILD_TOOL) --- "
 	exit 1
 fi
 shopt -u nocasematch
@@ -177,53 +177,43 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 
 		if ! [ -z "$ARTIFACT_FILE" ]; then 
 			ARTIFACT_FILE=$(find . -iname "$ARTIFACT_FILE")
-			ARTIFACT_NAME=$(basename "$ARTIFACT_FILE")
-			echo "Artifact File: $ARTIFACT_FILE"
-			echo "Artifact Name: $ARTIFACT_NAME"
-
-			POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_FILE" 2>&1)	
 		elif ! [ -z "$ARTIFACT_DIRECTORY" ] && ! [ -z "$ARTIFACT_TYPE" ]; then
 			FILE_REGEX=$(echo $ARTIFACT_TYPE | sed 's/\.[^.]*$//') #truncates everything after the ".FileExtension"			
-			if [ -z $FILE_REGEX ]; then #if regex is NOT given for file name, look for default convention
-				ARTIFACT_FILE=$(find "$ARTIFACT_DIRECTORY" -iname "$REPO_NAME-$RELEASE_VERSION$ARTIFACT_TYPE" -print -quit) #take the first one because they are all going to be the same
+			if [ -z $FILE_REGEX ]; then 
+				ARTIFACT_FILE=$(find "$ARTIFACT_DIRECTORY" -iname "$REPO_NAME-$RELEASE_VERSION$ARTIFACT_TYPE")
 			else 
-				ARTIFACT_FILE=$(find "$ARTIFACT_DIRECTORY" -iname "$ARTIFACT_TYPE") #if more than one show up, error out
+				ARTIFACT_FILE=$(find "$ARTIFACT_DIRECTORY" -iname "$ARTIFACT_TYPE")
 			fi 
-			
-			if [ $(echo $ARTIFACT_FILE | wc -w) -gt 1 ]; then 
-				echo " --- ERROR: More than one file found matching $FILE_REGEX: --- "
-				echo "$ARTIFACT_FILE"
-				exit 1;
-			elif [ $(echo $ARTIFACT_FILE | wc -w) -eq 0 ]; then
-				echo " --- ERROR: NO files found matching $FILE_REGEX --- "
-				exit 1;
-			else 
-				ARTIFACT_NAME=$(basename "$ARTIFACT_FILE")
-				echo "Artifact File: $ARTIFACT_FILE"
-				echo "Artifact Name: $ARTIFACT_NAME"
-				POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_FILE" 2>&1)	
-			fi
 		else 
 			ARTIFACT_FILE=$(find . \( -iname "$REPO_NAME-$RELEASE_VERSION.zip" -o -iname "$REPO_NAME-$RELEASE_VERSION.tar" \) -print -quit)
-			if ! [ -z "$ARTIFACT_FILE" ]; then
-				ARTIFACT_NAME=$(basename "$ARTIFACT_FILE")
-				echo "Artifact ARTIFACT_FILE: $ARTIFACT_FILE"
-				echo "Artifact Name: $ARTIFACT_NAME" 
-				POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_FILE" 2>&1)
-			else 
+			if [ -z "$ARTIFACT_FILE" ]; then
 				echo " --- No artifact files found. No artifact will be attached to release. --- "
 				echo " --- Ending GitHub Autorelease Script --- "
 				exit 0
 			fi		
 		fi
 
-		if [ -z "$POST_COMMAND_OUTPUT" ]; then
-			echo " --- Artifacts attached to release on GitHub --- "
-			echo " --- Ending GitHub Autorelease Script --- "
-			exit 0
-		else
-			echo " --- $POST_COMMAND_OUTPUT --- "
-			exit 1
+		if [ $(echo $ARTIFACT_FILE | wc -w) -gt 1 ]; then 
+			echo " --- ERROR: More than one file found matching $FILE_REGEX: --- "
+			echo "$ARTIFACT_FILE"
+			exit 1;
+		elif [ $(echo $ARTIFACT_FILE | wc -w) -eq 0 ]; then
+			echo " --- ERROR: NO files found matching $FILE_REGEX --- "
+			exit 1;
+		else 	
+			ARTIFACT_NAME=$(basename "$ARTIFACT_FILE")
+			echo "Artifact File: $ARTIFACT_FILE"
+			echo "Artifact Name: $ARTIFACT_NAME"
+			POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_FILE" 2>&1)	
+			
+			if [ -z "$POST_COMMAND_OUTPUT" ]; then
+				echo " --- Artifacts attached to release on GitHub --- "
+				echo " --- Ending GitHub Autorelease Script --- "
+				exit 0
+			else
+				echo " --- $POST_COMMAND_OUTPUT --- "
+				exit 1
+			fi
 		fi
 
 	else 
@@ -235,4 +225,3 @@ else
 	echo " --- SNAPSHOT found in version name OR version name doesn't follow convention x.y.z where x,y,z are integers separated by .'s - ($RELEASE_VERSION) - NOT releasing to GitHub --- "
 	exit 0
 fi
-
