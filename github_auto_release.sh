@@ -65,11 +65,11 @@ do
             ;;
         -p|--nugetProject)
 			NUGET_PROJECT=$VAL
-			echo " - nuget project: $NUGET_PROJECT."
+			echo "	- nuget project: $NUGET_PROJECT."
 			;;
         -n|--attachArtifacts)
 			ATTACH_ARTIFACTS=$VAL
-			echo " - Attach Artifacts: $ATTACH_ARTIFACTS"
+			echo "	- Attach Artifacts: $ATTACH_ARTIFACTS"
 			;;
         -m|--releaseDesc) 
             DESCRIPTION=$VAL
