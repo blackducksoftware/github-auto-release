@@ -1,6 +1,6 @@
 ###############################################################################################################################################################################################
 ## BlackDuck Github Auto Release 
-## v0.0.6
+## v0.0.7
 ##
 ## Purpose: Automatically release build artifacts to GitHub on stable, non-SNAPSHOT, project builds. Uses the following project: https://github.com/aktau/github-release. 
 ##
@@ -14,6 +14,7 @@
 ##												*note that if there are more multiple directories with subdirectories of the same name, then you must specify assembly/target, or similar
 ##												*define file paths as follows sub1/sub2/sub3 ...
 ##		-p|--project						conditionally required: IF using a NuGet project, you must provide a project name
+##		-n|--attachArtifacts 				optional: choice to override attaching binaries. If set to false, script will only tag non-SNAPSHOT versions.
 ##		-m|--releaseDesc         			optional: add description for release to github
 ##		-o|--organization		   			optional: the name of the organization under which the repo is located (default is blackducksoftware)
 ##		-ev|--executableVersion   			optional: which version of the GitHub-Release executable to be used (default is v0.7.2 because that is the version this script is being tested with)
