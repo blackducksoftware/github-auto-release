@@ -25,6 +25,7 @@ ARTIFACT_FILE=""
 ARTIFACT_DIRECTORY=""
 ARTIFACT_TYPE=""
 NUGET_PROJECT=""
+ATTACH_ARTIFACTS="true"
 DESCRIPTION="GitHub Autorelease"
 EXECUTABLE_VERSION="v0.7.2" #script built/tested on this
 EXECUTABLE_PATH=~/temp/blackducksoftware
@@ -49,7 +50,7 @@ do
         -b|--buildTool) 
             BUILD_TOOL=$VAL
             ;;
-        -d|artifactDirectory)
+        -d|--artifactDirectory)
 			ARTIFACT_DIRECTORY=$VAL
 			echo "	- Artifact directory: $ARTIFACT_DIRECTORY. Script will look for this exact directory."
 			;;
@@ -63,14 +64,18 @@ do
             ;;
         -p|--nugetProject)
 			NUGET_PROJECT=$VAL
-			echo " - NuGet project: $NUGET_PROJECT."
+			echo " - nuget project: $NUGET_PROJECT."
 			;;
-        -m|--releaseDesc) #rename
+        -n|--attachArtifacts)
+			ATTACH_ARTIFACTS=$VAL
+			echo " - Attach Artifacts: $ATTACH_ARTIFACTS"
+			;;
+        -m|--releaseDesc) 
             DESCRIPTION=$VAL
             ;;
        	-o|--organization)
 			ORGANIZATION=$VAL
-			echo "	- Organization that owns repository: $ORGANIZATION"
+			echo "	- Organization: $ORGANIZATION. Owner of repository set."
 			;;
         -ev|--executableVersion)
 			EXECUTABLE_VERSION=$VAL
@@ -82,13 +87,14 @@ do
 			;;
         -h|--help) 
             echo "HELP MENU - options"
-			echo "-b|--buildTool 					required: specify build tool"
-			echo "-f|--artifactFile        			optional: specify file path to project's artifact file"
-			echo "-d|--artifactDirectory 				conditionally optional <if specified, artifactType must also be specified>: specify a directory to be zipped and released <CANNOT SPECIFY BOTH A DIRECTORY AND FILE>"
-			echo "-t|--artifactType 				conditionally optional <if specified, artifactDirectory must also be specified>: specify a file type for script to find, or specify a regex for a file name. ex. '.jar' OR '*repo-name*.jar' "
-			echo "-m|--releaseDesc         			optional: add description for release to github" 
-			echo "-o|--organization		   		optional: the name of the organization under which the repo is located (default is blackducksoftware)"
-			echo "-ev|--executableVersion   			optional: which version of the GitHub-Release executable to be used (default is v0.7.2)"
+			echo "-b|--buildTool 					required: specify build tool (maven, gradle, or nuget)"
+			echo "-f|--artifactFile        			optional: specify the exact file path to project's artifact file"
+			echo "-d|--artifactDirectory 			conditionally optional <if specified, artifactType must also be specified>: specify a directory to be zipped and released <CANNOT SPECIFY BOTH A DIRECTORY AND FILE>"
+			echo "-t|--artifactType 				conditionally optional <if specified, artifactDirectory must also be specified>: specify a file type for script to find, or specify a regex for a file name. (ex. '.jar' will find repo_name-release_version.jar, OR '*repo-name*.jar' will find files matching regex) "
+			echo "-n|--attachArtifacts 				optional: choice to override attaching binaries. If set to false, script will only tag non-SNAPSHOT versions."
+			echo "-m|--releaseDesc         			optional: add description for release to github (deaflt is 'Github Autorelease')" 
+			echo "-o|--organization		   			optional: the name of the organization under which the repo is located (default is blackducksoftware)"
+			echo "-ev|--executableVersion   		optional: which version of the GitHub-Release executable to be used (default is v0.7.2)"
 			echo "-ep|--executablePath 	   			optional: where on the user's machine the GitHub-Release executable will live (defualt is ~/temp/blackducksoftware)"
 			exit 1
 			;;
@@ -131,7 +137,6 @@ else
 	exit 1
 fi
 shopt -u nocasematch
-
 
 if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION" != *"SNAPSHOT"* ]]; then #regex matches x.y.z where x,y,z are integers
 
@@ -177,9 +182,14 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 	if [[ -z "$RELEASE_COMMAND_OUTPUT" ]]; then
 		echo " --- Release posted to GitHub --- "
 
+		if [[ "$ATTACH_ARTIFACTS" != "true" ]]; then
+			echo " --- Override set to NOT attach binaries. Script ending. --- "
+			exit 0
+		fi
+
 		if ! [[ -z "$ARTIFACT_FILE" ]]; then #locating specific file
 			ARTIFACT_FILE=$(find . -iname "$ARTIFACT_FILE")
-		elif ! [ -z "$ARTIFACT_DIRECTORY" ] && ! [ -z "$ARTIFACT_TYPE" ]; then #looking for file pattern in given directory
+		elif ! [[ -z "$ARTIFACT_DIRECTORY" ]] && ! [[ -z "$ARTIFACT_TYPE" ]]; then #looking for file pattern in given directory
 			FILE_REGEX=$(echo $ARTIFACT_TYPE | sed 's/\.[^.]*$//') #truncates everything after the ".FileExtension"			
 			if [[ -z $FILE_REGEX ]]; then 
 				ARTIFACT_FILE=$(find "$ARTIFACT_DIRECTORY" -iname "$REPO_NAME-$RELEASE_VERSION$ARTIFACT_TYPE")
