@@ -6,16 +6,13 @@ This script will derive project name and versions for maven, gradle, and nuget p
 
 The only required input's are the build tool that the project is using, and the owner of the GitHub repository (you can fork the project and hardcode this if you'd like to).
 
-# Build
 
-How to: to run, ./github_auto_release.sh (parameters)    
-
-Available Parameters and Overrides:
+# Available Parameters and Overrides
 * Required:
   * -b|--buildTool 
     * specify build tool (maven or gradle for now)
   * -o|--owner
-    * name of the owner under which the repo is located (default is blackducksoftware)
+    * name of the owner under which the repo is located
 
 * Optional
   * -f|--artifactFile
@@ -41,7 +38,7 @@ Available Parameters and Overrides:
   * -ev|--executableVersion
     * which version of the GitHub-Release executable to be used (default is v0.7.2 because that is the version this script is being tested with)
   * -ep|--executablePath 
-    * where on the user's machine the GitHub-Release executable will live (defualt is set to ~/temp/blackducksoftware)
+    * where on the user's machine the GitHub-Release executable will live (defualt is set to ~/temp/GARTool)
 
 
 
