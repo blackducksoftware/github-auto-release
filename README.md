@@ -1,4 +1,4 @@
-# Git Hub Auto Release
+# Overview
 
 A release script for automatic release to GitHub that can be executed as a build step in Jenkins or other CI tools.
 
@@ -8,3 +8,16 @@ The only required inputs are the build tool that the project is using, and the o
 
 This script [utilizes this go-based release tool](https://github.com/aktau/github-release). The script will wget the executable to a the folder ~/temp/GARTool. After deriving all relevant
 information, the script will use the executable to post to github, and to attach the build artifacts to that release.
+
+# Build
+
+
+
+# Where can I get the latest release?
+
+Here: https://github.com/blackducksoftware/github-auto-release/releases
+
+
+# Documentation
+
+All run documentation is found on the [wiki page](https://github.com/blackducksoftware/github-auto-release/wiki/Running)
