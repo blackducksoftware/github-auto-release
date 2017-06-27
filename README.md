@@ -1,6 +1,6 @@
 # Git Hub Auto Release
 
-A release script for automatic release to GitHub
+A release script for automatic release to GitHub that can be executed as a build step in Jenkins or other CI tools.
 
 # Build
 
