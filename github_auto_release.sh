@@ -19,6 +19,7 @@
 ##		-m|--releaseDesc         			optional: add description for release to github
 ##		-ev|--executableVersion   			optional: which version of the GitHub-Release executable to be used (default is v0.7.2 because that is the version this script is being tested with)
 ##		-ep|--executablePath 	   			optional: where on the user's machine the GitHub-Release executable will live (defualt is set to ~/temp/blackducksoftware)
+## 		-h|--help 							help menu
 ################################################################################################################################################################################################ 
 
 ARTIFACT_DIRECTORY=""
@@ -158,7 +159,7 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
            	mv $EXECUTABLE_PATH/bin/"$OS_TYPE"/amd64/github-release $EXECUTABLE_PATH
 			rm -rf "$EXECUTABLE_PATH/$OS_TYPE"-amd64-github-release.tar.bz2 bin
 			echo " --- github-release executable now located in $EXECUTABLE_PATH --- "
-		elif [[ "$OS_TYPE" == "mingw" ]]; then #haven't tested on windows
+		elif [[ "$OS_TYPE" == "mingw" ]]; then 
 			curl -OL "https://github.com/aktau/github-release/releases/download/v0.7.2/windows-amd64-github-release.zip" 
 			unzip windows-amd64-github-release.zip
 			mv bin/windows/amd64/github-release $EXECUTABLE_PATH
