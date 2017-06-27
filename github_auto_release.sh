@@ -7,6 +7,7 @@
 ## How to: to run, ./github_auto_release.sh <parameters>
 ## Parameters:
 ##		-b|--buildTool 						required: specify build tool (maven or gradle for now)
+##		-o|--owner		   					required: the name of the owner under which the repo is located (default is blackducksoftware)
 ##		-f|--artifactFile        			optional: specify file path to project's artifact file (if build artifact is not standard, user can specify to make sure it is released) <CANNOT SPECIFY BOTH A DIRECTORY AND FILE>
 ##		-t|--artifactType					conditionally optional <if specified, artifactDirectory must also be specified>: if file artifact file type is not .zip, .tar, or .jar, specify a file type here and the script will look for a file in workspace that follows the convention of REPO_NAME-RELEASE_VERSION with specified ending
 ##												*you may define as .jar to look for file with name repo_name-release_version.jar, or define regex.jar to find a jar file that matches given regex (ex. *.jar matches any jar with any name)
@@ -16,21 +17,20 @@
 ##		-p|--project						conditionally required: IF using a NuGet project, you must provide a project name
 ##		-n|--attachArtifacts 				optional: choice to override attaching binaries. If set to false, script will only tag non-SNAPSHOT versions.
 ##		-m|--releaseDesc         			optional: add description for release to github
-##		-o|--organization		   			optional: the name of the organization under which the repo is located (default is blackducksoftware)
 ##		-ev|--executableVersion   			optional: which version of the GitHub-Release executable to be used (default is v0.7.2 because that is the version this script is being tested with)
 ##		-ep|--executablePath 	   			optional: where on the user's machine the GitHub-Release executable will live (defualt is set to ~/temp/blackducksoftware)
 ################################################################################################################################################################################################ 
 
-BUILD_TOOL=""
-ARTIFACT_FILE=""
 ARTIFACT_DIRECTORY=""
+ARTIFACT_FILE=""
 ARTIFACT_TYPE=""
+BUILD_TOOL=""
 NUGET_PROJECT=""
+OWNER="" 
 ATTACH_ARTIFACTS="true"
 DESCRIPTION="GitHub Autorelease"
 EXECUTABLE_VERSION="v0.7.2" #script built/tested on this
-EXECUTABLE_PATH=~/temp/blackducksoftware
-ORGANIZATION="blackducksoftware" 
+EXECUTABLE_PATH=~/temp/GARTool
 
 echo " --- Starting GitHub Autorelease Script --- " 
 
@@ -51,6 +51,9 @@ do
         -b|--buildTool) 
             BUILD_TOOL=$VAL
             ;;
+        -o|--owner)
+			OWNER=$VAL
+			;;
         -d|--artifactDirectory)
 			ARTIFACT_DIRECTORY=$VAL
 			echo "	- Artifact directory: $ARTIFACT_DIRECTORY. Script will look for this exact directory."
@@ -74,10 +77,6 @@ do
         -m|--releaseDesc) 
             DESCRIPTION=$VAL
             ;;
-       	-o|--organization)
-			ORGANIZATION=$VAL
-			echo "	- Organization: $ORGANIZATION. Owner of repository set."
-			;;
         -ev|--executableVersion)
 			EXECUTABLE_VERSION=$VAL
 			echo "	- Github-release executable version: $EXECUTABLE_VERSION"
@@ -94,7 +93,7 @@ do
 			echo "-t|--artifactType 				conditionally optional <if specified, artifactDirectory must also be specified>: specify a file type for script to find, or specify a regex for a file name. (ex. '.jar' will find repo_name-release_version.jar, OR '*repo-name*.jar' will find files matching regex) "
 			echo "-n|--attachArtifacts 				optional: choice to override attaching binaries. If set to false, script will only tag non-SNAPSHOT versions."
 			echo "-m|--releaseDesc         			optional: add description for release to github (deaflt is 'Github Autorelease')" 
-			echo "-o|--organization		   			optional: the name of the organization under which the repo is located (default is blackducksoftware)"
+			echo "-o|--owner		   				optional: the name of the owner under which the repo is located (default is blackducksoftware)"
 			echo "-ev|--executableVersion   		optional: which version of the GitHub-Release executable to be used (default is v0.7.2)"
 			echo "-ep|--executablePath 	   			optional: where on the user's machine the GitHub-Release executable will live (defualt is ~/temp/blackducksoftware)"
 			exit 1
@@ -106,8 +105,8 @@ do
     esac
 done
 
-if [[ -z "$BUILD_TOOL" ]]; then 
-    echo " --- ERROR: BUILD_TOOL ($BUILD_TOOL) (-b|--buildTool) must be specified --- "
+if [[ -z "$BUILD_TOOL" ]] || [[ -z "$OWNER" ]]; then 
+    echo " --- ERROR: BUILD_TOOL ($BUILD_TOOL) (-b|--buildTool) and OWNER ($OWNER) (-o|--owner) must be specified --- "
     exit 1
 elif [[ "$BUILD_TOOL" == "nuget" ]] && [[ -z "$NUGET_PROJECT" ]]; then
 	echo " -- ERROR: With nuget project, you MUST specify a project name."
@@ -176,10 +175,11 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 	
 	echo "Build Tool: $BUILD_TOOL"
 	echo "Release Description specified: $DESCRIPTION"
+	echo "Owner: $OWNER"
 	echo "Repository Name: $REPO_NAME"
 	echo "Release Version: $RELEASE_VERSION"
 
-	RELEASE_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release release --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $RELEASE_VERSION --description "$DESCRIPTION" 2>&1)
+	RELEASE_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release release --user $OWNER --repo $REPO_NAME --tag $RELEASE_VERSION --name $RELEASE_VERSION --description "$DESCRIPTION" 2>&1)
 	if [[ -z "$RELEASE_COMMAND_OUTPUT" ]]; then
 		echo " --- Release posted to GitHub --- "
 
@@ -217,7 +217,7 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 			ARTIFACT_NAME=$(basename "$ARTIFACT_FILE")
 			echo "Artifact File: $ARTIFACT_FILE"
 			echo "Artifact Name: $ARTIFACT_NAME"
-			POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $ORGANIZATION --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_FILE" 2>&1)	
+			POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $OWNER --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_FILE" 2>&1)	
 			
 			if [[ -z "$POST_COMMAND_OUTPUT" ]]; then
 				echo " --- Artifacts attached to release on GitHub --- "
