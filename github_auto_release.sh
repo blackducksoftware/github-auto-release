@@ -4,7 +4,7 @@
 ##
 ## Purpose: Automatically release build artifacts to GitHub on stable, non-SNAPSHOT, project builds. Uses the following project: https://github.com/aktau/github-release. 
 ##
-## How to: to run, ./github_auto_release.sh <parameters>
+## How to: to run, ./github_auto_release.sh <parameters>     
 ## Parameters:
 ##		-b|--buildTool 						required: specify build tool (maven or gradle for now)
 ##		-o|--owner		   					required: the name of the owner under which the repo is located (default is blackducksoftware)
@@ -20,6 +20,7 @@
 ##		-ev|--executableVersion   			optional: which version of the GitHub-Release executable to be used (default is v0.7.2 because that is the version this script is being tested with)
 ##		-ep|--executablePath 	   			optional: where on the user's machine the GitHub-Release executable will live (defualt is set to ~/temp/blackducksoftware)
 ## 		-h|--help 							help menu
+##
 ################################################################################################################################################################################################ 
 
 ARTIFACT_DIRECTORY=""
