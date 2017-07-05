@@ -20,4 +20,4 @@ Here: https://github.com/blackducksoftware/github-auto-release/releases
 
 # Documentation
 
-All run documentation is found on the [wiki page](https://github.com/blackducksoftware/github-auto-release/wiki/Running)
+All run documentation is found on the [wiki page](https://github.com/blackducksoftware/github-auto-release/wiki)
