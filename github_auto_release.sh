@@ -180,6 +180,8 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 	echo "Owner: $OWNER"
 	echo "Repository Name: $REPO_NAME"
 	echo "Release Version: $RELEASE_VERSION"
+	
+	echo "Executable Path: $EXECUTABLE_PATH"
 
 	RELEASE_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release release --user $OWNER --repo $REPO_NAME --tag $RELEASE_VERSION --name $RELEASE_VERSION --description "$DESCRIPTION" 2>&1)
 	if [[ -z "$RELEASE_COMMAND_OUTPUT" ]]; then
