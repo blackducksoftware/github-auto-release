@@ -1,12 +1,13 @@
 ###############################################################################################################################################################################################
 ## BlackDuck Github Auto Release 
-## v0.0.7
+## v0.0.8
 ##
 ## Purpose: Automatically release build artifacts to GitHub on stable, non-SNAPSHOT, project builds. Uses the following project: https://github.com/aktau/github-release. 
 ##
 ## How to: to run, ./github_auto_release.sh <parameters>     
 ## Parameters:
-##		-b|--buildTool 						required: specify build tool (maven or gradle for now)
+##      -b|--buildTool 						conditionally required: specify build tool (maven or gradle for now) if you are not providing a releaseVersion.
+##      -v|--releaseVersion                 conditionally required: specify the release version of the project.
 ##		-o|--owner		   					required: the name of the owner under which the repo is located (default is blackducksoftware)
 ##		-f|--artifactFile        			optional: specify file path to project's artifact file (if build artifact is not standard, user can specify to make sure it is released) <CANNOT SPECIFY BOTH A DIRECTORY AND FILE>
 ##		-t|--artifactType					conditionally optional <if specified, artifactDirectory must also be specified>: if file artifact file type is not .zip, .tar, or .jar, specify a file type here and the script will look for a file in workspace that follows the convention of REPO_NAME-RELEASE_VERSION with specified ending
@@ -27,6 +28,7 @@ ARTIFACT_DIRECTORY=""
 ARTIFACT_FILE=""
 ARTIFACT_TYPE=""
 BUILD_TOOL=""
+RELEASE_VERSION=""
 NUGET_PROJECT=""
 OWNER="" 
 ATTACH_ARTIFACTS="true"
@@ -53,6 +55,9 @@ do
         -b|--buildTool) 
             BUILD_TOOL=$VAL
             ;;
+        -v|--releaseVersion)
+                    RELEASE_VERSION=$VAL
+                    ;;
         -o|--owner)
 			OWNER=$VAL
 			;;
@@ -107,8 +112,11 @@ do
     esac
 done
 
-if [[ -z "$BUILD_TOOL" ]] || [[ -z "$OWNER" ]]; then 
-    echo " --- ERROR: BUILD_TOOL ($BUILD_TOOL) (-b|--buildTool) and OWNER ($OWNER) (-o|--owner) must be specified --- "
+if ! [[ -z "$BUILD_TOOL" ]] && ! [[ -z "$RELEASE_VERSION" ]]; then
+    echo " --- ERROR: BUILD_TOOL ($BUILD_TOOL) (-b|--buildTool) and RELEASE_VERSION ($RELEASE_VERSION) (-v|--releaseVersion) cannot both be specified --- "
+    exit 1
+elif [[ -z "$BUILD_TOOL" ]] && [[ -z "$RELEASE_VERSION" ]] || [[ -z "$OWNER" ]]; then
+    echo " --- ERROR: BUILD_TOOL ($BUILD_TOOL) (-b|--buildTool) or RELEASE_VERSION ($RELEASE_VERSION) (-v|--releaseVersion) and OWNER ($OWNER) (-o|--owner) must be specified --- "
     exit 1
 elif [[ "$BUILD_TOOL" == "nuget" ]] && [[ -z "$NUGET_PROJECT" ]]; then
 	echo " -- ERROR: With nuget project, you MUST specify a project name."
@@ -119,24 +127,26 @@ elif ! [[ -z "$ARTIFACT_DIRECTORY" ]] && ! [[ -z "$ARTIFACT_FILE" ]]; then
 fi
 
 shopt -s nocasematch
-if [[ "$BUILD_TOOL" == "maven" ]]; then 
-	RELEASE_VERSION=$(mvn help:evaluate -Dexpression=project.version | grep 'Building')
-	RELEASE_VERSION=$(echo $RELEASE_VERSION | awk {'print $NF'})
-elif [[ "$BUILD_TOOL" == "gradle" ]]; then
-	RELEASE_VERSION=$(./gradlew properties | grep ^version:)
-	RELEASE_VERSION=${RELEASE_VERSION##* }
-elif [[ "$BUILD_TOOL" == "nuget" ]]; then 
-	RELEASE_VERSION=$(find "$NUGET_PROJECT/Properties" -iname "AssemblyInfo.cs")
-	RELEASE_VERSION=$(grep "^\[assembly: AssemblyVersion(" $RELEASE_VERSION)
-	RELEASE_VERSION=$(echo $RELEASE_VERSION | awk -F "[()]" '{ for (i=2; i<NF; i+=2) print $i }')
-	RELEASE_VERSION=${RELEASE_VERSION%?}
-	RELEASE_VERSION=$(echo $RELEASE_VERSION | cut -c 2-)
-	if [[ $RELEASE_VERSION =~ [0-9]+[.][0-9]+[.][0-9]+[.][0-9]+ ]]; then 
-		RELEASE_VERSION=$(echo $RELEASE_VERSION | sed 's/\.[^.]*$//')
-	fi 
-else 
-	echo " --- ERROR: build tool must either be maven, gradle, or nuget. (you entered: $BUILD_TOOL) --- "
-	exit 1
+if [[ -z "$RELEASE_VERSION" ]]; then
+    if [[ "$BUILD_TOOL" == "maven" ]]; then
+        RELEASE_VERSION=$(mvn help:evaluate -Dexpression=project.version | grep 'Building')
+        RELEASE_VERSION=$(echo $RELEASE_VERSION | awk {'print $NF'})
+    elif [[ "$BUILD_TOOL" == "gradle" ]]; then
+        RELEASE_VERSION=$(./gradlew properties | grep ^version:)
+        RELEASE_VERSION=${RELEASE_VERSION##* }
+    elif [[ "$BUILD_TOOL" == "nuget" ]]; then
+        RELEASE_VERSION=$(find "$NUGET_PROJECT/Properties" -iname "AssemblyInfo.cs")
+        RELEASE_VERSION=$(grep "^\[assembly: AssemblyVersion(" $RELEASE_VERSION)
+        RELEASE_VERSION=$(echo $RELEASE_VERSION | awk -F "[()]" '{ for (i=2; i<NF; i+=2) print $i }')
+        RELEASE_VERSION=${RELEASE_VERSION%?}
+        RELEASE_VERSION=$(echo $RELEASE_VERSION | cut -c 2-)
+        if [[ $RELEASE_VERSION =~ [0-9]+[.][0-9]+[.][0-9]+[.][0-9]+ ]]; then
+            RELEASE_VERSION=$(echo $RELEASE_VERSION | sed 's/\.[^.]*$//')
+        fi
+    else
+        echo " --- ERROR: build tool must either be maven, gradle, or nuget. (you entered: $BUILD_TOOL) --- "
+        exit 1
+    fi
 fi
 shopt -u nocasematch
 
