@@ -35,6 +35,7 @@ ATTACH_ARTIFACTS="true"
 DESCRIPTION="GitHub Autorelease"
 EXECUTABLE_VERSION="v0.7.2" #script built/tested on this
 EXECUTABLE_PATH=~/temp/GARTool
+TARGET=""
 
 echo " --- Starting GitHub Autorelease Script --- " 
 
@@ -92,6 +93,10 @@ do
 			EXECUTABLE_PATH=$VAL
 			echo "	- Github-release excutable location path: $EXECUTABLE_PATH"
 			;;
+		-br|--branch)
+			TARGET=$VAL
+			echo "	- Github-release target branch: $TARGET"
+			;;
         -h|--help) 
             echo "HELP MENU - options"
 			echo "-b|--buildTool 					required: specify build tool (maven, gradle, or nuget)"
@@ -103,6 +108,7 @@ do
 			echo "-o|--owner		   				optional: the name of the owner under which the repo is located (default is blackducksoftware)"
 			echo "-ev|--executableVersion   		optional: which version of the GitHub-Release executable to be used (default is v0.7.2)"
 			echo "-ep|--executablePath 	   			optional: where on the user's machine the GitHub-Release executable will live (defualt is ~/temp/blackducksoftware)"
+			echo "-br|--branch 	   					optional: the branch that should be tagged on release"
 			exit 1
 			;;
 		*)
@@ -192,8 +198,9 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 	echo "Release Version: $RELEASE_VERSION"
 	
 	echo "Executable Path: $EXECUTABLE_PATH"
+	echo "Branch: $TARGET"
 
-	RELEASE_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release release --user $OWNER --repo $REPO_NAME --tag $RELEASE_VERSION --name $RELEASE_VERSION --description "$DESCRIPTION" 2>&1)
+	RELEASE_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release release --user $OWNER --repo $REPO_NAME --tag $RELEASE_VERSION --name $RELEASE_VERSION --description "$DESCRIPTION" --target $TARGET 2>&1)
 	if [[ -z "$RELEASE_COMMAND_OUTPUT" ]]; then
 		echo " --- Release posted to GitHub --- "
 
