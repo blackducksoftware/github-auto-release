@@ -1,6 +1,6 @@
 ###############################################################################################################################################################################################
 ## BlackDuck Github Auto Release 
-## v0.0.8
+## v1.2.0
 ##
 ## Purpose: Automatically release build artifacts to GitHub on stable, non-SNAPSHOT, project builds. Uses the following project: https://github.com/aktau/github-release. 
 ##
