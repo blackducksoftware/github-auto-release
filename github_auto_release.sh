@@ -18,7 +18,7 @@
 ##		-p|--project						conditionally required: IF using a NuGet project, you must provide a project name
 ##		-n|--attachArtifacts 				optional: choice to override attaching binaries. If set to false, script will only tag non-SNAPSHOT versions.
 ##		-m|--releaseDesc         			optional: add description for release to github
-##		-ev|--executableVersion   			optional: which version of the GitHub-Release executable to be used (default is v0.7.2 because that is the version this script is being tested with)
+##		-ev|--executableVersion   			optional: which version of the GitHub-Release executable to be used (default is v0.10.0 because that is the version this script is being tested with)
 ##		-ep|--executablePath 	   			optional: where on the user's machine the GitHub-Release executable will live (defualt is set to ~/temp/blackducksoftware)
 ## 		-h|--help 							help menu
 ##
@@ -33,7 +33,7 @@ NUGET_PROJECT=""
 OWNER="" 
 ATTACH_ARTIFACTS="true"
 DESCRIPTION="GitHub Autorelease"
-EXECUTABLE_VERSION="v0.7.2" #script built/tested on this
+EXECUTABLE_VERSION="v0.10.0" #script built/tested on this
 EXECUTABLE_PATH=~/temp/GARTool
 TARGET=""
 
@@ -106,7 +106,7 @@ do
 			echo "-n|--attachArtifacts 				optional: choice to override attaching binaries. If set to false, script will only tag non-SNAPSHOT versions."
 			echo "-m|--releaseDesc         			optional: add description for release to github (deaflt is 'Github Autorelease')" 
 			echo "-o|--owner		   				optional: the name of the owner under which the repo is located (default is blackducksoftware)"
-			echo "-ev|--executableVersion   		optional: which version of the GitHub-Release executable to be used (default is v0.7.2)"
+			echo "-ev|--executableVersion   		optional: which version of the GitHub-Release executable to be used (default is v0.10.0)"
 			echo "-ep|--executablePath 	   			optional: where on the user's machine the GitHub-Release executable will live (defualt is ~/temp/blackducksoftware)"
 			echo "-br|--branch 	   					optional: the branch that should be tagged on release"
 			exit 1
@@ -159,25 +159,22 @@ shopt -u nocasematch
 if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION" != *"SNAPSHOT"* ]]; then #regex matches x.y.z where x,y,z are integers
 
 	####################################	FINDING GITHUB-RELEASE EXECUTABLE FILE 		#####################################
-	if [ ! -d "$EXECUTABLE_PATH" ]; then
-		mkdir -p "$EXECUTABLE_PATH"
-		echo "$EXECUTABLE_PATH was just created"
-	fi
+	mkdir -p "${EXECUTABLE_PATH}"
 
-	EXECUTABLE_PATH_EXISTS=$(find $EXECUTABLE_PATH -name "github-release")
-	if [ -z "$EXECUTABLE_PATH_EXISTS" ]; then 
+	EXECUTABLE_PATH_EXISTS=$(find ${EXECUTABLE_PATH} -name "github-release")
+	if [ -z "${EXECUTABLE_PATH_EXISTS}" ]; then
 		echo " --- github-release executable does not already exist --- "
-		OS_TYPE=$(uname -a | awk {'print $1'}) 
-		OS_TYPE=$(echo "$OS_TYPE" | tr '[:upper:]' '[:lower:]') #convert OSTYPE to lower case
-		if [[ "$OS_TYPE" == "darwin" ]] || [[ "$OS_TYPE" == "linux" ]]; then
+		OS_TYPE=$(uname -s)
+		OS_TYPE=${OS_TYPE,,} #convert OS_TYPE to lower case
+		if [[ "${OS_TYPE}" =~ ^(darwin|linux)$ ]]; then
 			echo " --- Getting necessary github-release executable from github.com/aktau/github-release --- "
-			wget -O $EXECUTABLE_PATH/"$OS_TYPE"-amd64-github-release.tar.bz2 "https://github.com/aktau/github-release/releases/download/$EXECUTABLE_VERSION/$OS_TYPE-amd64-github-release.tar.bz2"
-           	tar -xvf "$EXECUTABLE_PATH/$OS_TYPE"-amd64-github-release.tar.bz2 -C $EXECUTABLE_PATH
-           	mv $EXECUTABLE_PATH/bin/"$OS_TYPE"/amd64/github-release $EXECUTABLE_PATH
-			rm -rf "$EXECUTABLE_PATH/$OS_TYPE"-amd64-github-release.tar.bz2 bin
-			echo " --- github-release executable now located in $EXECUTABLE_PATH --- "
+			artifactFile="${OS_TYPE}-amd64-github-release.bz2"
+			wget -O "${EXECUTABLE_PATH}/${artifactFile}" "https://github.com/aktau/github-release/releases/download/${EXECUTABLE_VERSION}/${artifactFile}"
+			bzcat "${EXECUTABLE_PATH}/${artifactFile}" > "${EXECUTABLE_PATH}/github-release"
+			chmod +x "${EXECUTABLE_PATH}/github-release"
+			echo " --- github-release executable now located in ${EXECUTABLE_PATH} --- "
 		elif [[ "$OS_TYPE" == "mingw" ]]; then 
-			curl -OL "https://github.com/aktau/github-release/releases/download/v0.7.2/windows-amd64-github-release.zip" 
+			curl -OL "https://github.com/aktau/github-release/releases/download/${EXECUTABLE_VERSION}/windows-amd64-github-release.zip"
 			unzip windows-amd64-github-release.zip
 			mv bin/windows/amd64/github-release $EXECUTABLE_PATH
 			rm -R bin windows-amd64-github-release.zip
