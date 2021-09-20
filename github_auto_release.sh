@@ -1,6 +1,6 @@
 #####################################################################################################
 ## BlackDuck Github Auto Release
-## v1.2.0
+## v2.0.0
 ##
 ## Purpose: Automatically release build artifacts to GitHub on stable, non-SNAPSHOT, project builds.
 ##    Uses the following project: https://github.com/aktau/github-release.
@@ -48,18 +48,17 @@ ATTACH_ARTIFACTS="true"
 BUILD_TOOL=""
 DESCRIPTION="GitHub Autorelease"
 EXECUTABLE_PATH=~/temp/GARTool
-EXECUTABLE_VERSION="v0.10.0" #script built/tested on this
+EXECUTABLE_VERSION="v0.10.0"
 NUGET_PROJECT=""
 OWNER=""
 RELEASE_VERSION=""
 TARGET=""
 
-echo " --- Starting GitHub Autorelease Script --- "
+__log " --- Starting GitHub Autorelease Script --- "
 
 ####################################	PARSING INPUT PARAMETERS 		#####################################
 args=("$@")
-for ((i=0; i<$#; i=i+2));
-do
+for ((i=0; i<$#; i=i+2)); do
     FLAG=${args[$i]}
     VAL=${args[$i+1]}
     if [[ "$VAL" == -* ]] || [[ "$VAL" == --* ]] || [[ -z "$VAL" ]]; then #should this just be a check for an empty string, or should it be like it is?
@@ -130,6 +129,8 @@ elif [[ "$BUILD_TOOL" == "nuget" ]] && [[ -z "$NUGET_PROJECT" ]]; then
   __log_and_exit " -- ERROR: With nuget project, you MUST specify a project name." 1
 elif [[ -n "$ARTIFACT_DIRECTORY" ]] && [[ -n "$ARTIFACT_FILE" ]]; then
   __log_and_exit " --- ERROR: ARTIFACT_DIRECTORY ($ARTIFACT_DIRECTORY) (-d|--artifactDirectory) and ARTIFACT_FILE ($ARTIFACT_FILE) (-f|--artifactFile) cannot both be specified --- " 1
+elif [[ -z "${GITHUB_TOKEN}" ]]; then
+  __log_and_exit " --- ERROR: Environment variable named GITHUB_TOKEN is required to be set in run environment --- " 1
 fi
 
 shopt -s nocasematch
