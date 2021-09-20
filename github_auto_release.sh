@@ -1,11 +1,12 @@
-###############################################################################################################################################################################################
+#####################################################################################################
 ## BlackDuck Github Auto Release
 ## v1.2.0
 ##
-## Purpose: Automatically release build artifacts to GitHub on stable, non-SNAPSHOT, project builds. Uses the following project: https://github.com/aktau/github-release.
+## Purpose: Automatically release build artifacts to GitHub on stable, non-SNAPSHOT, project builds.
+##    Uses the following project: https://github.com/aktau/github-release.
 ##
 ## How to: to run, ./github_auto_release.sh <parameters>
-################################################################################################################################################################################################
+#####################################################################################################
 function __log_and_exit() {
   __log "${1}"
   exit "$2"
@@ -63,8 +64,7 @@ do
     VAL=${args[$i+1]}
     if [[ "$VAL" == -* ]] || [[ "$VAL" == --* ]] || [[ -z "$VAL" ]]; then #should this just be a check for an empty string, or should it be like it is?
     	if [[ "$FLAG" != "-h" ]] && [[ "$FLAG" != "--help" ]]; then
-	    	echo " --- ERROR: Incorrectly formatted VAL input. Flag/Value pair < $FLAG, $VAL > causing error. --- "
-	    	exit 1
+        __log_and_exit " --- ERROR: Incorrectly formatted VAL input. Flag/Value pair < $FLAG, $VAL > causing error. --- " 1
     	fi
     fi
 
