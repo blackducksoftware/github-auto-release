@@ -202,44 +202,39 @@ Branch: $TARGET"
 			__log_and_exit " --- Override set to NOT attach binaries. Script ending. --- " 0
 		fi
 
-		if ! [[ -z "$ARTIFACT_FILE" ]]; then #locating specific file
-			ARTIFACT_FILE=$(find . -iname "$ARTIFACT_FILE")
-		elif ! [[ -z "$ARTIFACT_DIRECTORY" ]] && ! [[ -z "$ARTIFACT_TYPE" ]]; then #looking for file pattern in given directory
-			FILE_REGEX=$(echo $ARTIFACT_TYPE | sed 's/\.[^.]*$//') #truncates everything after the ".FileExtension"			
-			if [[ -z $FILE_REGEX ]]; then 
+		if [[ -n "$ARTIFACT_DIRECTORY" ]] && [[ -n "$ARTIFACT_TYPE" ]]; then #looking for file pattern in given directory
+			FILE_REGEX=$(echo $ARTIFACT_TYPE | sed 's/\.[^.]*$//') #truncates everything after the ".FileExtension"
+			if [[ -z $FILE_REGEX ]]; then
 				ARTIFACT_FILE=$(find "$ARTIFACT_DIRECTORY" -iname "$REPO_NAME-$RELEASE_VERSION$ARTIFACT_TYPE")
-			else 
+			else
 				ARTIFACT_FILE=$(find "$ARTIFACT_DIRECTORY" -iname "$ARTIFACT_TYPE")
-			fi 
-		else #default case - look for .zip or .tar of repo_name-release_version
+			fi
+		elif [[ -z "${ARTIFACT_FILE}" ]]; then #default case - look for .zip or .tar of repo_name-release_version
 			ARTIFACT_FILE=$(find . \( -iname "$REPO_NAME-$RELEASE_VERSION.zip" -o -iname "$REPO_NAME-$RELEASE_VERSION.tar" \) -print -quit)
 			if [[ -z "$ARTIFACT_FILE" ]]; then
-				echo " --- No artifact files found. No artifact will be attached to release. --- "
-				echo " --- Ending GitHub Autorelease Script --- "
-				exit 0
+				__log " --- No artifact files found. No artifact will be attached to release. --- "
+				__log_and_exit " --- Ending GitHub Autorelease Script --- " 0
 			fi
 		fi
 
-		if [[ $(echo $ARTIFACT_FILE | wc -w) -gt 1 ]]; then 
-			echo " --- ERROR: More than one file found matching $FILE_REGEX: --- "
-			echo "$ARTIFACT_FILE"
-			exit 1;
-		elif [[ $(echo $ARTIFACT_FILE | wc -w) -eq 0 ]]; then
-			echo " --- ERROR: NO files found matching $FILE_REGEX --- "
-			exit 1;
-		else 	
+    foundFileCount=$(echo ${ARTIFACT_FILE} | wc -w)
+		if [[ "${foundFileCount}" -ne 1 ]]; then
+		  __log " --- ERROR: Expected one file but found ${foundFileCount} --- "
+			__log_and_exit "${ARTIFACT_FILE}" 1
+		elif [[ ! -f "${ARTIFACT_FILE}" ]]; then
+			__log " --- ERROR: Input file does not exist: --- "
+			__log_and_exit "${ARTIFACT_FILE}" 1
+		else
 			ARTIFACT_NAME=$(basename "$ARTIFACT_FILE")
-			echo "Artifact File: $ARTIFACT_FILE"
-			echo "Artifact Name: $ARTIFACT_NAME"
-			POST_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release upload --user $OWNER --repo $REPO_NAME --tag $RELEASE_VERSION --name $ARTIFACT_NAME --file "$ARTIFACT_FILE" 2>&1)	
-			
+			__log "Artifact File: $ARTIFACT_FILE"
+			__log "Artifact Name: $ARTIFACT_NAME"
+			POST_COMMAND_OUTPUT=$(exec "$EXECUTABLE_PATH"/github-release upload --user "$OWNER" --repo "$REPO_NAME" --tag "$RELEASE_VERSION" --name "$ARTIFACT_NAME" --file "$ARTIFACT_FILE" 2>&1)
+
 			if [[ -z "$POST_COMMAND_OUTPUT" ]]; then
-				echo " --- Artifacts attached to release on GitHub --- "
-				echo " --- Ending GitHub Autorelease Script --- "
-				exit 0
+				__log " --- Artifacts attached to release on GitHub --- "
+				__log_and_exit " --- Ending GitHub Autorelease Script --- " 0
 			else
-				echo " --- $POST_COMMAND_OUTPUT --- "
-				exit 1
+				__log_and_exit " --- $POST_COMMAND_OUTPUT --- " 1
 			fi
 		fi
 
