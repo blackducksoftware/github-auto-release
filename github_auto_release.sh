@@ -182,19 +182,17 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 	fi
 
 	####################################	USING INPUT AND EXECUTABLE FILE TO RELEASE/POST TO GITHUB 		#####################################
-	REPO_NAME=$(git remote -v)
-	REPO_NAME=$(echo $REPO_NAME | awk '{print $2}')
-	REPO_NAME=${REPO_NAME##*/}
-	REPO_NAME=${REPO_NAME%.*}
-	
-	echo "Build Tool: $BUILD_TOOL"
-	echo "Release Description specified: $DESCRIPTION"
-	echo "Owner: $OWNER"
-	echo "Repository Name: $REPO_NAME"
-	echo "Release Version: $RELEASE_VERSION"
-	
-	echo "Executable Path: $EXECUTABLE_PATH"
-	echo "Branch: $TARGET"
+	REPO_NAME=$(git remote get-url origin | xargs basename -s .git)
+
+_details_="Build Tool: $BUILD_TOOL
+Release Description specified: $DESCRIPTION
+Owner: $OWNER
+Repository Name: $REPO_NAME
+Release Version: $RELEASE_VERSION
+Executable Path: $EXECUTABLE_PATH
+Branch: $TARGET"
+
+  __log "${_details_}"
 
 	RELEASE_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release release --user $OWNER --repo $REPO_NAME --tag $RELEASE_VERSION --name $RELEASE_VERSION --description "$DESCRIPTION" --target $TARGET 2>&1)
 	if [[ -z "$RELEASE_COMMAND_OUTPUT" ]]; then
