@@ -1,10 +1,10 @@
 ###############################################################################################################################################################################################
-## BlackDuck Github Auto Release 
+## BlackDuck Github Auto Release
 ## v1.2.0
 ##
-## Purpose: Automatically release build artifacts to GitHub on stable, non-SNAPSHOT, project builds. Uses the following project: https://github.com/aktau/github-release. 
+## Purpose: Automatically release build artifacts to GitHub on stable, non-SNAPSHOT, project builds. Uses the following project: https://github.com/aktau/github-release.
 ##
-## How to: to run, ./github_auto_release.sh <parameters>     
+## How to: to run, ./github_auto_release.sh <parameters>
 ################################################################################################################################################################################################
 function __log_and_exit() {
   __log "${1}"
@@ -53,7 +53,7 @@ OWNER=""
 RELEASE_VERSION=""
 TARGET=""
 
-echo " --- Starting GitHub Autorelease Script --- " 
+echo " --- Starting GitHub Autorelease Script --- "
 
 ####################################	PARSING INPUT PARAMETERS 		#####################################
 args=("$@")
