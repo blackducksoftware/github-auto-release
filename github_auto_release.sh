@@ -136,7 +136,7 @@ shopt -s nocasematch
 if [[ -z "$RELEASE_VERSION" ]]; then
     if [[ "$BUILD_TOOL" == "maven" ]]; then
         RELEASE_VERSION=$(mvn help:evaluate -Dexpression=project.version | grep 'Building')
-        RELEASE_VERSION=$(echo $RELEASE_VERSION | awk {'print $NF'})
+        RELEASE_VERSION=$(echo $RELEASE_VERSION | awk '{print$NF}')
     elif [[ "$BUILD_TOOL" == "gradle" ]]; then
         RELEASE_VERSION=$(./gradlew properties | grep ^version:)
         RELEASE_VERSION=${RELEASE_VERSION##* }
@@ -150,8 +150,7 @@ if [[ -z "$RELEASE_VERSION" ]]; then
             RELEASE_VERSION=$(echo $RELEASE_VERSION | sed 's/\.[^.]*$//')
         fi
     else
-        echo " --- ERROR: build tool must either be maven, gradle, or nuget. (you entered: $BUILD_TOOL) --- "
-        exit 1
+        __log_and_exit " --- ERROR: build tool must either be maven, gradle, or nuget. (you entered: $BUILD_TOOL) --- " 1
     fi
 fi
 shopt -u nocasematch
@@ -163,22 +162,22 @@ if [[ "$RELEASE_VERSION" =~ [0-9]+[.][0-9]+[.][0-9]+ ]] && [[ "$RELEASE_VERSION"
 
 	EXECUTABLE_PATH_EXISTS=$(find ${EXECUTABLE_PATH} -name "github-release")
 	if [ -z "${EXECUTABLE_PATH_EXISTS}" ]; then
-		echo " --- github-release executable does not already exist --- "
+		__log " --- github-release executable does not already exist --- "
 		OS_TYPE=$(uname -s)
 		OS_TYPE=${OS_TYPE,,} #convert OS_TYPE to lower case
 		if [[ "${OS_TYPE}" =~ ^(darwin|linux)$ ]]; then
-			echo " --- Getting necessary github-release executable from github.com/aktau/github-release --- "
+			__log " --- Getting necessary github-release executable from github.com/aktau/github-release --- "
 			artifactFile="${OS_TYPE}-amd64-github-release.bz2"
 			wget -O "${EXECUTABLE_PATH}/${artifactFile}" "https://github.com/aktau/github-release/releases/download/${EXECUTABLE_VERSION}/${artifactFile}"
 			bzcat "${EXECUTABLE_PATH}/${artifactFile}" > "${EXECUTABLE_PATH}/github-release"
 			chmod +x "${EXECUTABLE_PATH}/github-release"
-			echo " --- github-release executable now located in ${EXECUTABLE_PATH} --- "
-		elif [[ "$OS_TYPE" == "mingw" ]]; then 
+			__log " --- github-release executable now located in ${EXECUTABLE_PATH} --- "
+		elif [[ "${OS_TYPE}" == "mingw" ]]; then
 			curl -OL "https://github.com/aktau/github-release/releases/download/${EXECUTABLE_VERSION}/windows-amd64-github-release.zip"
 			unzip windows-amd64-github-release.zip
 			mv bin/windows/amd64/github-release $EXECUTABLE_PATH
 			rm -R bin windows-amd64-github-release.zip
-			echo " --- github-release executable now located in $EXECUTABLE_PATH --- "
+			__log " --- github-release executable now located in ${EXECUTABLE_PATH} --- "
 		fi
 	fi
 
