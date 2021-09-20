@@ -43,14 +43,14 @@ Parameters:
 ARTIFACT_DIRECTORY=""
 ARTIFACT_FILE=""
 ARTIFACT_TYPE=""
-BUILD_TOOL=""
-RELEASE_VERSION=""
-NUGET_PROJECT=""
-OWNER="" 
 ATTACH_ARTIFACTS="true"
+BUILD_TOOL=""
 DESCRIPTION="GitHub Autorelease"
-EXECUTABLE_VERSION="v0.10.0" #script built/tested on this
 EXECUTABLE_PATH=~/temp/GARTool
+EXECUTABLE_VERSION="v0.10.0" #script built/tested on this
+NUGET_PROJECT=""
+OWNER=""
+RELEASE_VERSION=""
 TARGET=""
 
 echo " --- Starting GitHub Autorelease Script --- " 
@@ -69,58 +69,56 @@ do
     fi
 
     case $FLAG in
-        -b|--buildTool) 
-            BUILD_TOOL=$VAL
-            ;;
-        -v|--releaseVersion)
-                    RELEASE_VERSION=$VAL
-                    ;;
-        -o|--owner)
-			OWNER=$VAL
-			;;
-        -d|--artifactDirectory)
-			ARTIFACT_DIRECTORY=$VAL
-			echo "	- Artifact directory: $ARTIFACT_DIRECTORY. Script will look for this exact directory."
-			;;
-        -t|--artifactType)
-			ARTIFACT_TYPE=$VAL
-			echo "	- Artifact type: $ARTIFACT_TYPE. Script will look for this type of file."
-			;;
-        -f|--artifactFile)
-            ARTIFACT_FILE=$VAL
-            echo "	- Artifact file path: $ARTIFACT_FILE. Script will look for this exact build artifact."
-            ;;
-        -p|--nugetProject)
-			NUGET_PROJECT=$VAL
-			echo "	- nuget project: $NUGET_PROJECT."
-			;;
-        -n|--attachArtifacts)
-			ATTACH_ARTIFACTS=$VAL
-			echo "	- Attach Artifacts: $ATTACH_ARTIFACTS"
-			;;
-        -m|--releaseDesc) 
-            DESCRIPTION=$VAL
-            ;;
-        -ev|--executableVersion)
-			EXECUTABLE_VERSION=$VAL
-			echo "	- Github-release executable version: $EXECUTABLE_VERSION"
-			;;
-		-ep|--executablePath)
-			EXECUTABLE_PATH=$VAL
-			echo "	- Github-release excutable location path: $EXECUTABLE_PATH"
-			;;
-		-br|--branch)
-			TARGET=$VAL
-			echo "	- Github-release target branch: $TARGET"
-			;;
-        -h|--help) 
-            echo "${_usage_}"
-			exit 1
-			;;
-		*)
-			echo " --- ERROR: unrecognized FLAG variable in Flag/Value pair: < $FLAG, $VAL > --- "
-			exit 1
-			;;
+      -d|--artifactDirectory)
+        ARTIFACT_DIRECTORY=$VAL
+        __log "	- Artifact directory: $ARTIFACT_DIRECTORY. Script will look for this exact directory."
+        ;;
+      -t|--artifactType)
+        ARTIFACT_TYPE=$VAL
+        __log "	- Artifact type: $ARTIFACT_TYPE. Script will look for this type of file."
+        ;;
+      -f|--artifactFile)
+        ARTIFACT_FILE=$VAL
+        __log "	- Artifact file path: $ARTIFACT_FILE. Script will look for this exact build artifact."
+        ;;
+      -b|--buildTool)
+        BUILD_TOOL=$VAL
+        ;;
+      -v|--releaseVersion)
+        RELEASE_VERSION=$VAL
+        ;;
+      -o|--owner)
+        OWNER=$VAL
+        ;;
+      -p|--nugetProject)
+        NUGET_PROJECT=$VAL
+        __log "	- nuget project: $NUGET_PROJECT."
+        ;;
+      -n|--attachArtifacts)
+        ATTACH_ARTIFACTS=$VAL
+        __log "	- Attach Artifacts: $ATTACH_ARTIFACTS"
+        ;;
+      -m|--releaseDesc)
+        DESCRIPTION=$VAL
+        ;;
+      -ev|--executableVersion)
+        EXECUTABLE_VERSION=$VAL
+        __log "	- Github-release executable version: $EXECUTABLE_VERSION"
+        ;;
+      -ep|--executablePath)
+        EXECUTABLE_PATH=$VAL
+        __log "	- Github-release executable location path: $EXECUTABLE_PATH"
+        ;;
+      -br|--branch)
+        TARGET=$VAL
+        __log "	- Github-release target branch: $TARGET"
+        ;;
+      -h|--help)
+        __log_and_exit "${_usage_}" 1
+        ;;
+      *)
+        __log_and_exit " --- ERROR: unrecognized FLAG variable in Flag/Value pair: < $FLAG, $VAL > --- " 1
+        ;;
     esac
 done
 
