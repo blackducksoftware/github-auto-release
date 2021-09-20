@@ -122,18 +122,14 @@ do
     esac
 done
 
-if ! [[ -z "$BUILD_TOOL" ]] && ! [[ -z "$RELEASE_VERSION" ]]; then
-    echo " --- ERROR: BUILD_TOOL ($BUILD_TOOL) (-b|--buildTool) and RELEASE_VERSION ($RELEASE_VERSION) (-v|--releaseVersion) cannot both be specified --- "
-    exit 1
+if [[ -n "$BUILD_TOOL" ]] && [[ -n "$RELEASE_VERSION" ]]; then
+  __log_and_exit " --- ERROR: BUILD_TOOL ($BUILD_TOOL) (-b|--buildTool) and RELEASE_VERSION ($RELEASE_VERSION) (-v|--releaseVersion) cannot both be specified --- " 1
 elif [[ -z "$BUILD_TOOL" ]] && [[ -z "$RELEASE_VERSION" ]] || [[ -z "$OWNER" ]]; then
-    echo " --- ERROR: BUILD_TOOL ($BUILD_TOOL) (-b|--buildTool) or RELEASE_VERSION ($RELEASE_VERSION) (-v|--releaseVersion) and OWNER ($OWNER) (-o|--owner) must be specified --- "
-    exit 1
+  __log_and_exit " --- ERROR: BUILD_TOOL ($BUILD_TOOL) (-b|--buildTool) or RELEASE_VERSION ($RELEASE_VERSION) (-v|--releaseVersion) and OWNER ($OWNER) (-o|--owner) must be specified --- " 1
 elif [[ "$BUILD_TOOL" == "nuget" ]] && [[ -z "$NUGET_PROJECT" ]]; then
-	echo " -- ERROR: With nuget project, you MUST specify a project name."
-	exit 1
-elif ! [[ -z "$ARTIFACT_DIRECTORY" ]] && ! [[ -z "$ARTIFACT_FILE" ]]; then
-	echo " --- ERROR: ARTIFACT_DIRECTORY ($ARTIFACT_DIRECTORY) (-d|--artifactDirectory) and ARTIFACT_FILE ($ARTIFACT_FILE) (-f|--artifactFile) cannot both be specified --- "
-	exit 1
+  __log_and_exit " -- ERROR: With nuget project, you MUST specify a project name." 1
+elif [[ -n "$ARTIFACT_DIRECTORY" ]] && [[ -n "$ARTIFACT_FILE" ]]; then
+  __log_and_exit " --- ERROR: ARTIFACT_DIRECTORY ($ARTIFACT_DIRECTORY) (-d|--artifactDirectory) and ARTIFACT_FILE ($ARTIFACT_FILE) (-f|--artifactFile) cannot both be specified --- " 1
 fi
 
 shopt -s nocasematch
