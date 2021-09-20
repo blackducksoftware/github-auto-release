@@ -194,13 +194,12 @@ Branch: $TARGET"
 
   __log "${_details_}"
 
-	RELEASE_COMMAND_OUTPUT=$(exec $EXECUTABLE_PATH/github-release release --user $OWNER --repo $REPO_NAME --tag $RELEASE_VERSION --name $RELEASE_VERSION --description "$DESCRIPTION" --target $TARGET 2>&1)
-	if [[ -z "$RELEASE_COMMAND_OUTPUT" ]]; then
-		echo " --- Release posted to GitHub --- "
+	RELEASE_COMMAND_OUTPUT=$(exec "$EXECUTABLE_PATH"/github-release release --user "$OWNER" --repo "$REPO_NAME" --tag "$RELEASE_VERSION" --name "$RELEASE_VERSION" --description "$DESCRIPTION" --target "$TARGET" 2>&1)
+	if [[ -z "${RELEASE_COMMAND_OUTPUT}" ]]; then
+		__log " --- Release posted to GitHub --- "
 
 		if [[ "$ATTACH_ARTIFACTS" != "true" ]]; then
-			echo " --- Override set to NOT attach binaries. Script ending. --- "
-			exit 0
+			__log_and_exit " --- Override set to NOT attach binaries. Script ending. --- " 0
 		fi
 
 		if ! [[ -z "$ARTIFACT_FILE" ]]; then #locating specific file
@@ -218,7 +217,7 @@ Branch: $TARGET"
 				echo " --- No artifact files found. No artifact will be attached to release. --- "
 				echo " --- Ending GitHub Autorelease Script --- "
 				exit 0
-			fi		
+			fi
 		fi
 
 		if [[ $(echo $ARTIFACT_FILE | wc -w) -gt 1 ]]; then 
@@ -244,12 +243,10 @@ Branch: $TARGET"
 			fi
 		fi
 
-	else 
-		echo " --- $RELEASE_COMMAND_OUTPUT --- "
-		exit 1
-	fi 
+	else
+		__log_and_exit " --- ${RELEASE_COMMAND_OUTPUT} --- " 1
+	fi
 
 else
-	echo " --- SNAPSHOT found in version name OR version name doesn't follow convention x.y.z where x,y,z are integers separated by .'s - ($RELEASE_VERSION) - NOT releasing to GitHub --- "
-	exit 0
+	__log " --- SNAPSHOT found in version name OR version name doesn't follow convention x.y.z where x,y,z are integers separated by .'s - ($RELEASE_VERSION) - NOT releasing to GitHub --- " 0
 fi
