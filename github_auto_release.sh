@@ -1,6 +1,6 @@
 #####################################################################################################
 ## BlackDuck Github Auto Release
-## v2.0.0
+## v2.1.0
 ##
 ## Purpose: Automatically release build artifacts to GitHub on stable, non-SNAPSHOT, project builds.
 ##    Uses the following project: https://github.com/aktau/github-release.
@@ -78,7 +78,7 @@ for ((i=0; i<$#; i=i+2)); do
         ;;
       -f|--artifactFile)
         ARTIFACT_FILE=$VAL
-        __log "	- Artifact file path: $ARTIFACT_FILE. Script will look for this exact build artifact."
+        __log "	- Artifact file path: ${ARTIFACT_FILE}. Script will look for this exact build artifact."
         ;;
       -b|--buildTool)
         BUILD_TOOL=$VAL
@@ -127,8 +127,8 @@ elif [[ -z "$BUILD_TOOL" ]] && [[ -z "$RELEASE_VERSION" ]] || [[ -z "$OWNER" ]];
   __log_and_exit " --- ERROR: BUILD_TOOL ($BUILD_TOOL) (-b|--buildTool) or RELEASE_VERSION ($RELEASE_VERSION) (-v|--releaseVersion) and OWNER ($OWNER) (-o|--owner) must be specified --- " 1
 elif [[ "$BUILD_TOOL" == "nuget" ]] && [[ -z "$NUGET_PROJECT" ]]; then
   __log_and_exit " -- ERROR: With nuget project, you MUST specify a project name." 1
-elif [[ -n "$ARTIFACT_DIRECTORY" ]] && [[ -n "$ARTIFACT_FILE" ]]; then
-  __log_and_exit " --- ERROR: ARTIFACT_DIRECTORY ($ARTIFACT_DIRECTORY) (-d|--artifactDirectory) and ARTIFACT_FILE ($ARTIFACT_FILE) (-f|--artifactFile) cannot both be specified --- " 1
+elif [[ -n "$ARTIFACT_DIRECTORY" ]] && [[ -n "${ARTIFACT_FILE}" ]]; then
+  __log_and_exit " --- ERROR: ARTIFACT_DIRECTORY ($ARTIFACT_DIRECTORY) (-d|--artifactDirectory) and ARTIFACT_FILE (${ARTIFACT_FILE}) (-f|--artifactFile) cannot both be specified --- " 1
 elif [[ -z "${GITHUB_TOKEN}" ]]; then
   __log_and_exit " --- ERROR: Environment variable named GITHUB_TOKEN is required to be set in run environment --- " 1
 fi
@@ -212,7 +212,7 @@ Branch: $TARGET"
 			fi
 		elif [[ -z "${ARTIFACT_FILE}" ]]; then #default case - look for .zip or .tar of repo_name-release_version
 			ARTIFACT_FILE=$(find . \( -iname "$REPO_NAME-$RELEASE_VERSION.zip" -o -iname "$REPO_NAME-$RELEASE_VERSION.tar" \) -print -quit)
-			if [[ -z "$ARTIFACT_FILE" ]]; then
+			if [[ -z "${ARTIFACT_FILE}" ]]; then
 				__log " --- No artifact files found. No artifact will be attached to release. --- "
 				__log_and_exit " --- Ending GitHub Autorelease Script --- " 0
 			fi
@@ -226,17 +226,30 @@ Branch: $TARGET"
 			__log " --- ERROR: Input file does not exist: --- "
 			__log_and_exit "${ARTIFACT_FILE}" 1
 		else
-			ARTIFACT_NAME=$(basename "$ARTIFACT_FILE")
-			__log "Artifact File: $ARTIFACT_FILE"
-			__log "Artifact Name: $ARTIFACT_NAME"
-			POST_COMMAND_OUTPUT=$(exec "$EXECUTABLE_PATH"/github-release upload --user "$OWNER" --repo "$REPO_NAME" --tag "$RELEASE_VERSION" --name "$ARTIFACT_NAME" --file "$ARTIFACT_FILE" 2>&1)
+			ARTIFACT_NAME=$(basename "${ARTIFACT_FILE}")
+			__log "Artifact File: ${ARTIFACT_FILE}"
+			__log "Artifact Name: ${ARTIFACT_NAME}"
 
-			if [[ -z "$POST_COMMAND_OUTPUT" ]]; then
-				__log " --- Artifacts attached to release on GitHub --- "
-				__log_and_exit " --- Ending GitHub Autorelease Script --- " 0
-			else
-				__log_and_exit " --- $POST_COMMAND_OUTPUT --- " 1
-			fi
+			retryCounter=0
+			maxRetry=5
+
+			while : ; do
+			  ((retryCounter++))
+			  __log "Executing try ${retryCounter} of ${maxRetry} to upload artifacts"
+        POST_COMMAND_OUTPUT=$(exec "${EXECUTABLE_PATH}"/github-release upload --user "${OWNER}" --repo "${REPO_NAME}" --tag "${RELEASE_VERSION}" --name "${ARTIFACT_NAME}" --file "${ARTIFACT_FILE}" 2>&1)
+
+        if [[ -z "${POST_COMMAND_OUTPUT}" ]]; then
+          __log " --- Artifacts attached to release on GitHub --- "
+          __log_and_exit " --- Ending GitHub Autorelease Script --- " 0
+        fi
+
+        if [[ ${retryCounter} -lt ${maxRetry} ]]; then
+          __log "Sleeping before trying again"
+          sleep 5
+        else
+          __log_and_exit " --- ${POST_COMMAND_OUTPUT} --- " 1
+        fi
+			done
 		fi
 
 	else
